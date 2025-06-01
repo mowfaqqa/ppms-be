@@ -13,6 +13,9 @@ import portfolioRoutes from "./routes/portfolio.routes";
 import pillarRoutes from "./routes/pillar.routes";
 import projectRoutes from "./routes/project.routes";
 import taskRoutes from "./routes/task.routes";
+import taskAssignmentsRoutes from "./routes/task-assignments.routes";
+import taskSubtasksRoutes from "./routes/task-subtasks.routes";
+import taskTimeTrackingRoutes from "./routes/task-time-tracking.routes";
 import timeRoutes from "./routes/time.routes";
 import fileRoutes from "./routes/file.routes";
 import budgetRoutes from "./routes/budget.routes";
@@ -35,9 +38,13 @@ const logsDir = path.join(__dirname, "../logs");
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
-
+const corsOptions = {
+  origin: ["http://localhost:3000"],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true, // for cookies, authorization headers, etc.
+};
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
@@ -49,6 +56,9 @@ app.use("/api/portfolios", portfolioRoutes);
 app.use("/api/pillars", pillarRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
+app.use("/api/tasks", taskAssignmentsRoutes);
+app.use("/api/tasks", taskSubtasksRoutes);
+app.use("/api/tasks", taskTimeTrackingRoutes);
 app.use("/api/time", timeRoutes);
 app.use("/api/files", fileRoutes);
 app.use("/api/budgets", budgetRoutes);

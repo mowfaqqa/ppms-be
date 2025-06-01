@@ -1,215 +1,242 @@
-import { PrismaClient, Role, User } from "@prisma/client";
-import { hashPassword } from "../utils/password.utils";
+import { PrismaClient, Portfolio } from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
 
 const prisma = new PrismaClient();
 
-// Get all users
-export const getAllUsers = async (): Promise<Partial<User>[]> => {
-  const users = await prisma.user.findMany({
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      createdAt: true,
-      updatedAt: true,
+// Create portfolio
+export const createPortfolio = async (data: {
+  name: string;
+  year?: number;
+  description?: string;
+  budget?: number;
+  startDate?: Date;
+  endDate?: Date;
+  status?: string;
+}): Promise<Portfolio> => {
+  // Extract year from startDate if not provided
+  const year = new Date().getFullYear();
+  
+  // Check if portfolio with same name and year already exists
+  const existingPortfolio = await prisma.portfolio.findFirst({
+    where: {
+      name: data.name,
+      year: year,
     },
   });
 
-  return users;
-};
-
-// Get user by ID
-export const getUserById = async (id: string): Promise<Partial<User>> => {
-  const user = await prisma.user.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      createdAt: true,
-      updatedAt: true,
-      projects: {
-        select: {
-          id: true,
-          project: {
-            select: {
-              id: true,
-              name: true,
-              status: true,
-            },
-          },
-          permissions: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      },
-      tasks: {
-        select: {
-          id: true,
-          task: {
-            select: {
-              id: true,
-              title: true,
-              status: true,
-              priority: true,
-            },
-          },
-        },
-      },
-    },
-  });
-
-  if (!user) {
-    throw new ApiError(HttpStatus.NOT_FOUND, "User not found");
+  if (existingPortfolio) {
+    throw new ApiError(
+      HttpStatus.CONFLICT,
+      `Portfolio with name '${data.name}' for year ${year} already exists`
+    );
   }
 
-  return user;
+  return prisma.portfolio.create({
+    data: {
+      name: data.name,
+      year: year,
+      description: data.description,
+      budget: data.budget,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      status: data.status || "PLANNING", // Default status if not provided
+      // Add other fields to your schema if needed
+    },
+  });
 };
 
-// Update user
-export const updateUser = async (
+// Get all portfolios
+export const getAllPortfolios = async (): Promise<Portfolio[]> => {
+  return prisma.portfolio.findMany({
+    orderBy: {
+      year: "desc",
+    },
+  });
+};
+
+// Get portfolio by ID
+export const getPortfolioById = async (
+  id: string
+): Promise<Portfolio & { pillars: any[] }> => {
+  const portfolio = await prisma.portfolio.findUnique({
+    where: { id },
+    include: {
+      pillars: {
+        include: {
+          projects: {
+            select: {
+              id: true,
+              name: true,
+              status: true,
+              startDate: true,
+              endDate: true,
+              _count: {
+                select: {
+                  tasks: true,
+                },
+              },
+            },
+          },
+          _count: {
+            select: {
+              projects: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!portfolio) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Portfolio not found");
+  }
+
+  return portfolio;
+};
+
+// Update portfolio
+export const updatePortfolio = async (
   id: string,
   data: {
     name?: string;
-    email?: string;
-    password?: string;
-    role?: Role;
+    year?: number;
+    description?: string;
   }
-): Promise<Partial<User>> => {
-  // Check if user exists
-  const existingUser = await prisma.user.findUnique({
+): Promise<Portfolio> => {
+  // Check if portfolio exists
+  const portfolio = await prisma.portfolio.findUnique({
     where: { id },
   });
 
-  if (!existingUser) {
-    throw new ApiError(HttpStatus.NOT_FOUND, "User not found");
+  if (!portfolio) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Portfolio not found");
   }
 
-  // If updating email, check if new email is already taken
-  if (data.email && data.email !== existingUser.email) {
-    const emailTaken = await prisma.user.findUnique({
-      where: { email: data.email },
+  // If updating name and year, check if another portfolio with same name and year exists
+  if (
+    (data.name || data.year) &&
+    (data.name !== portfolio.name || data.year !== portfolio.year)
+  ) {
+    const existingPortfolio = await prisma.portfolio.findFirst({
+      where: {
+        name: data.name || portfolio.name,
+        year: data.year || portfolio.year,
+        id: { not: id },
+      },
     });
 
-    if (emailTaken) {
-      throw new ApiError(HttpStatus.CONFLICT, "Email already taken");
+    if (existingPortfolio) {
+      throw new ApiError(
+        HttpStatus.CONFLICT,
+        `Portfolio with name '${data.name || portfolio.name}' for year ${
+          data.year || portfolio.year
+        } already exists`
+      );
     }
   }
 
-  // Hash password if provided
-  if (data.password) {
-    data.password = await hashPassword(data.password);
+  return prisma.portfolio.update({
+    where: { id },
+    data,
+  });
+};
+
+// Delete portfolio
+export const deletePortfolio = async (id: string): Promise<void> => {
+  // Check if portfolio exists
+  const portfolio = await prisma.portfolio.findUnique({
+    where: { id },
+    include: {
+      pillars: {
+        include: {
+          projects: true,
+        },
+      },
+    },
+  });
+
+  if (!portfolio) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Portfolio not found");
   }
 
-  // Update user
-  const updatedUser = await prisma.user.update({
+  // Delete portfolio (cascade will delete pillars, projects, tasks, etc.)
+  await prisma.portfolio.delete({
     where: { id },
-    data: {
-      name: data.name,
-      email: data.email,
-      password: data.password,
-      role: data?.role!,
+  });
+};
+
+// Get portfolio stats
+export const getPortfolioStats = async (id: string) => {
+  // Check if portfolio exists
+  const portfolio = await prisma.portfolio.findUnique({
+    where: { id },
+  });
+
+  if (!portfolio) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Portfolio not found");
+  }
+
+  // Get pillar count
+  const pillarCount = await prisma.pillar.count({
+    where: { portfolioId: id },
+  });
+
+  // Get project counts by status
+  const projects = await prisma.project.findMany({
+    where: {
+      pillar: {
+        portfolioId: id,
+      },
     },
     select: {
       id: true,
-      email: true,
-      name: true,
-      role: true,
-      createdAt: true,
-      updatedAt: true,
+      status: true,
     },
   });
 
-  return updatedUser;
-};
+  const projectsByStatus = {
+    PLANNING: 0,
+    IN_PROGRESS: 0,
+    ON_HOLD: 0,
+    COMPLETED: 0,
+    CANCELLED: 0,
+    total: projects.length,
+  };
 
-// Delete user
-export const deleteUser = async (id: string): Promise<void> => {
-  // Check if user exists
-  const user = await prisma.user.findUnique({
-    where: { id },
+  projects.forEach((project) => {
+    projectsByStatus[project.status]++;
   });
 
-  if (!user) {
-    throw new ApiError(HttpStatus.NOT_FOUND, "User not found");
-  }
-
-  await prisma.user.delete({
-    where: { id },
-  });
-};
-
-// Get user workload
-export const getUserWorkload = async (userId: string) => {
-  // Check if user exists
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-  });
-
-  if (!user) {
-    throw new ApiError(HttpStatus.NOT_FOUND, "User not found");
-  }
-
-  // Count active projects
-  const projectCount = await prisma.projectMember.count({
+  // Get total task count and status breakdown
+  const tasks = await prisma.task.findMany({
     where: {
-      userId,
       project: {
-        status: {
-          in: ["PLANNING", "IN_PROGRESS"],
+        pillar: {
+          portfolioId: id,
         },
       },
     },
-  });
-
-  // Count active tasks
-  const taskCount = await prisma.taskAssignment.count({
-    where: {
-      userId,
-      task: {
-        status: {
-          in: ["TODO", "IN_PROGRESS"],
-        },
-      },
+    select: {
+      id: true,
+      status: true,
     },
   });
 
-  // Get time entries for the last 30 days
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const tasksByStatus = {
+    TODO: 0,
+    IN_PROGRESS: 0,
+    REVIEW: 0,
+    COMPLETED: 0,
+    total: tasks.length,
+  };
 
-  const timeEntries = await prisma.timeEntry.findMany({
-    where: {
-      userId,
-      startTime: {
-        gte: thirtyDaysAgo,
-      },
-    },
-  });
-
-  // Calculate total hours worked
-  let totalHours = 0;
-
-  timeEntries.forEach((entry) => {
-    if (entry.endTime) {
-      const durationMs = entry.endTime.getTime() - entry.startTime.getTime();
-      totalHours += durationMs / (1000 * 60 * 60);
-    }
+  tasks.forEach((task) => {
+    tasksByStatus[task.status]++;
   });
 
   return {
-    projectCount,
-    taskCount,
-    timeTracking: {
-      entriesLast30Days: timeEntries.length,
-      totalHoursLast30Days: totalHours,
-    },
-    isOverloaded: projectCount > 3 || taskCount > 3,
+    pillarCount,
+    projects: projectsByStatus,
+    tasks: tasksByStatus,
   };
 };

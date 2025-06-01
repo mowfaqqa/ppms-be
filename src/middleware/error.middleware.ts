@@ -4,7 +4,7 @@ import { ApiError, HttpStatus } from "../utils/error.utils";
 import logger from "../config/logger";
 
 // Validate request
-export const validate = (req: Request, res: Response, next: NextFunction) => {
+export const validate = (req: Request, res: any, next: NextFunction) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(HttpStatus.BAD_REQUEST).json({
@@ -19,7 +19,7 @@ export const validate = (req: Request, res: Response, next: NextFunction) => {
 export const errorHandler = (
   err: Error | ApiError,
   req: Request,
-  res: Response,
+  res: any,
   next: NextFunction
 ) => {
   logger.error(`${err.name}: ${err.message}`, {
@@ -53,7 +53,7 @@ export const errorHandler = (
 };
 
 // Not found middleware
-export const notFound = (req: Request, res: Response, next: NextFunction) => {
+export const notFound = (req: Request, res: any, next: NextFunction) => {
   const error = new ApiError(
     HttpStatus.NOT_FOUND,
     `Not found - ${req.originalUrl}`

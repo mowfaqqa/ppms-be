@@ -34,7 +34,6 @@ export const authenticate = async (
     }
 
     const token = authHeader.split(" ")[1];
-
     if (!token) {
       throw new ApiError(
         HttpStatus.UNAUTHORIZED,

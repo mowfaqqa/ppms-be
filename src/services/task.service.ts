@@ -1,6 +1,6 @@
-import { PrismaClient, Task, TaskStatus, Priority } from '@prisma/client';
-import { ApiError, HttpStatus } from '../utils/error.utils';
-import { createNotification } from './notification.service';
+import { PrismaClient, Task, TaskStatus, Priority } from "@prisma/client";
+import { ApiError, HttpStatus } from "../utils/error.utils";
+import { createNotification } from "./notification.service";
 
 const prisma = new PrismaClient();
 
@@ -25,7 +25,7 @@ export const createTask = async (
   });
 
   if (!project) {
-    throw new ApiError(HttpStatus.NOT_FOUND, 'Project not found');
+    throw new ApiError(HttpStatus.NOT_FOUND, "Project not found");
   }
 
   // If parent task specified, check if it exists and belongs to the same project
@@ -35,13 +35,13 @@ export const createTask = async (
     });
 
     if (!parentTask) {
-      throw new ApiError(HttpStatus.NOT_FOUND, 'Parent task not found');
+      throw new ApiError(HttpStatus.NOT_FOUND, "Parent task not found");
     }
 
     if (parentTask.projectId !== data.projectId) {
       throw new ApiError(
         HttpStatus.BAD_REQUEST,
-        'Parent task must be in the same project'
+        "Parent task must be in the same project"
       );
     }
   }
@@ -51,7 +51,7 @@ export const createTask = async (
     if (new Date(data.startDate) > new Date(data.endDate)) {
       throw new ApiError(
         HttpStatus.BAD_REQUEST,
-        'Start date cannot be after end date'
+        "Start date cannot be after end date"
       );
     }
   }
@@ -71,7 +71,7 @@ export const createTask = async (
     if (projectMembers.length !== assigneeIds.length) {
       throw new ApiError(
         HttpStatus.BAD_REQUEST,
-        'One or more assignees are not members of the project'
+        "One or more assignees are not members of the project"
       );
     }
   }
@@ -83,8 +83,8 @@ export const createTask = async (
       data: {
         title: data.title,
         description: data.description,
-        status: data.status || 'TODO',
-        priority: data.priority || 'MEDIUM',
+        status: data.status || "TODO",
+        priority: data.priority || "MEDIUM",
         projectId: data.projectId,
         parentTaskId: data.parentTaskId,
         startDate: data.startDate ? new Date(data.startDate) : null,
@@ -106,15 +106,45 @@ export const createTask = async (
           // Create notification for each assignee
           await createNotification(
             userId,
-            'New Task Assignment',
+            "New Task Assignment",
             `You have been assigned to task: ${task.title}`,
-            'TASK_ASSIGNED',
+            "TASK_ASSIGNED",
             task.id,
-            'task'
+            "task"
           );
+
+          // Create task activity for assignment
+          await tx.taskActivity.create({
+            data: {
+              type: "ASSIGNED",
+              description: `assigned this task to ${userId}`, // Should get user name
+              taskId: task.id,
+              userId: creatorId,
+              metadata: {
+                assignedUserId: userId,
+              },
+            },
+          });
         })
       );
     }
+
+    // Create project activity log
+    await tx.projectActivity.create({
+      data: {
+        type: "TASK_CREATED",
+        description: `created task "${task.title}"`,
+        projectId: data.projectId,
+        userId: creatorId,
+        metadata: {
+          taskId: task.id,
+          taskTitle: task.title,
+          priority: task.priority,
+          status: task.status,
+          isSubtask: !!data.parentTaskId,
+        },
+      },
+    });
 
     return task;
   });
@@ -123,16 +153,14 @@ export const createTask = async (
 };
 
 // Get all tasks (with optional filters)
-export const getAllTasks = async (
-  filters?: {
-    projectId?: string;
-    status?: TaskStatus;
-    priority?: Priority;
-    assigneeId?: string;
-    parentTaskId?: string | null;
-    search?: string;
-  }
-): Promise<any[]> => {
+export const getAllTasks = async (filters?: {
+  projectId?: string;
+  status?: TaskStatus;
+  priority?: Priority;
+  assigneeId?: string;
+  parentTaskId?: string | null;
+  search?: string;
+}): Promise<any[]> => {
   const where: any = {};
 
   if (filters?.projectId) {
@@ -167,13 +195,13 @@ export const getAllTasks = async (
       {
         title: {
           contains: filters.search,
-          mode: 'insensitive',
+          mode: "insensitive",
         },
       },
       {
         description: {
           contains: filters.search,
-          mode: 'insensitive',
+          mode: "insensitive",
         },
       },
     ];
@@ -213,10 +241,10 @@ export const getAllTasks = async (
     },
     orderBy: [
       {
-        priority: 'desc',
+        priority: "desc",
       },
       {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
     ],
   });
@@ -296,16 +324,16 @@ export const getTaskById = async (id: string): Promise<any> => {
           },
         },
         orderBy: {
-          startTime: 'desc',
+          startTime: "desc",
         },
       },
       files: {
         orderBy: [
           {
-            versionGroup: 'asc',
+            versionGroup: "asc",
           },
           {
-            versionNumber: 'desc',
+            versionNumber: "desc",
           },
         ],
       },
@@ -313,7 +341,7 @@ export const getTaskById = async (id: string): Promise<any> => {
   });
 
   if (!task) {
-    throw new ApiError(HttpStatus.NOT_FOUND, 'Task not found');
+    throw new ApiError(HttpStatus.NOT_FOUND, "Task not found");
   }
 
   return task;
@@ -346,24 +374,27 @@ export const updateTask = async (
   });
 
   if (!task) {
-    throw new ApiError(HttpStatus.NOT_FOUND, 'Task not found');
+    throw new ApiError(HttpStatus.NOT_FOUND, "Task not found");
   }
 
   // If parent task is being changed, validate it
-  if (data.parentTaskId !== undefined && data.parentTaskId !== task.parentTaskId) {
+  if (
+    data.parentTaskId !== undefined &&
+    data.parentTaskId !== task.parentTaskId
+  ) {
     if (data.parentTaskId) {
       const parentTask = await prisma.task.findUnique({
         where: { id: data.parentTaskId },
       });
 
       if (!parentTask) {
-        throw new ApiError(HttpStatus.NOT_FOUND, 'Parent task not found');
+        throw new ApiError(HttpStatus.NOT_FOUND, "Parent task not found");
       }
 
       if (parentTask.projectId !== task.projectId) {
         throw new ApiError(
           HttpStatus.BAD_REQUEST,
-          'Parent task must be in the same project'
+          "Parent task must be in the same project"
         );
       }
 
@@ -371,7 +402,7 @@ export const updateTask = async (
       if (parentTask.parentTaskId === task.id) {
         throw new ApiError(
           HttpStatus.BAD_REQUEST,
-          'Circular task reference is not allowed'
+          "Circular task reference is not allowed"
         );
       }
     }
@@ -382,7 +413,7 @@ export const updateTask = async (
     if (new Date(data.startDate) > new Date(data.endDate)) {
       throw new ApiError(
         HttpStatus.BAD_REQUEST,
-        'Start date cannot be after end date'
+        "Start date cannot be after end date"
       );
     }
   }
@@ -396,41 +427,108 @@ export const updateTask = async (
         description: data.description,
         status: data.status,
         priority: data.priority,
-        startDate: data.startDate === null
-          ? null
-          : data.startDate
+        startDate:
+          data.startDate === null
+            ? null
+            : data.startDate
             ? new Date(data.startDate)
             : undefined,
-        endDate: data.endDate === null
-          ? null
-          : data.endDate
+        endDate:
+          data.endDate === null
+            ? null
+            : data.endDate
             ? new Date(data.endDate)
             : undefined,
-        parentTaskId: data.parentTaskId === null
-          ? null
-          : data.parentTaskId || undefined,
+        parentTaskId:
+          data.parentTaskId === null ? null : data.parentTaskId || undefined,
       },
     });
 
+    // Create specific activity logs for different types of changes
+    const activities = [];
+
+    if (data.status && data.status !== task.status) {
+      activities.push({
+        type: "STATUS_CHANGED",
+        description: `changed status from ${task.status} to ${data.status}`,
+        metadata: {
+          from: task.status,
+          to: data.status,
+        },
+      });
+    }
+
+    if (data.priority && data.priority !== task.priority) {
+      activities.push({
+        type: "PRIORITY_CHANGED",
+        description: `changed priority from ${task.priority} to ${data.priority}`,
+        metadata: {
+          from: task.priority,
+          to: data.priority,
+        },
+      });
+    }
+
+    if (data.title && data.title !== task.title) {
+      activities.push({
+        type: "TASK_UPDATED",
+        description: `updated task title`,
+        metadata: {
+          from: task.title,
+          to: data.title,
+        },
+      });
+    }
+
+    // Create task activities
+    for (const activity of activities) {
+      await tx.taskActivity.create({
+        data: {
+          type: activity.type as any,
+          description: activity.description,
+          taskId: id,
+          userId,
+          metadata: activity.metadata,
+        },
+      });
+    }
+
     // Create notifications for all assignees about the update
     const assigneeIds = task.assignments.map((a) => a.userId);
-    
-    if (assigneeIds.length > 0 && (data.status || data.priority || data.endDate)) {
+
+    if (assigneeIds.length > 0 && activities.length > 0) {
       await Promise.all(
         assigneeIds.map(async (assigneeId) => {
           // Don't notify the user who made the update
           if (assigneeId !== userId) {
             await createNotification(
               assigneeId,
-              'Task Updated',
+              "Task Updated",
               `Task "${task.title}" has been updated`,
-              'TASK_UPDATED',
+              "TASK_UPDATED",
               task.id,
-              'task'
+              "task"
             );
           }
         })
       );
+    }
+
+    // Create project activity log
+    if (activities.length > 0) {
+      await tx.projectActivity.create({
+        data: {
+          type: "TASK_UPDATED",
+          description: `updated task "${task.title}"`,
+          projectId: task.projectId,
+          userId,
+          metadata: {
+            taskId: task.id,
+            taskTitle: task.title,
+            changes: activities.map((a) => a.type),
+          },
+        },
+      });
     }
 
     return updated;
@@ -440,7 +538,7 @@ export const updateTask = async (
 };
 
 // Delete task
-export const deleteTask = async (id: string): Promise<void> => {
+export const deleteTask = async (id: string, userId: string): Promise<void> => {
   // Check if task exists
   const task = await prisma.task.findUnique({
     where: { id },
@@ -450,7 +548,7 @@ export const deleteTask = async (id: string): Promise<void> => {
   });
 
   if (!task) {
-    throw new ApiError(HttpStatus.NOT_FOUND, 'Task not found');
+    throw new ApiError(HttpStatus.NOT_FOUND, "Task not found");
   }
 
   // If task has subtasks, delete them first
@@ -462,8 +560,34 @@ export const deleteTask = async (id: string): Promise<void> => {
     });
   }
 
-  await prisma.task.delete({
-    where: { id },
+  await prisma.$transaction(async (tx) => {
+    // If task has subtasks, delete them first
+    if (task.subtasks.length > 0) {
+      await tx.task.deleteMany({
+        where: {
+          parentTaskId: id,
+        },
+      });
+    }
+
+    // Delete the main task
+    await tx.task.delete({
+      where: { id },
+    });
+
+    // Create project activity log
+    await tx.projectActivity.create({
+      data: {
+        type: "TASK_DELETED",
+        description: `deleted task "${task.title}"`,
+        projectId: task.projectId,
+        userId,
+        metadata: {
+          taskTitle: task.title,
+          taskId: id,
+        },
+      },
+    });
   });
 };
 
@@ -481,7 +605,7 @@ export const assignTaskToUser = async (
   });
 
   if (!task) {
-    throw new ApiError(HttpStatus.NOT_FOUND, 'Task not found');
+    throw new ApiError(HttpStatus.NOT_FOUND, "Task not found");
   }
 
   // Check if user exists
@@ -490,7 +614,7 @@ export const assignTaskToUser = async (
   });
 
   if (!user) {
-    throw new ApiError(HttpStatus.NOT_FOUND, 'User not found');
+    throw new ApiError(HttpStatus.NOT_FOUND, "User not found");
   }
 
   // Check if user is a member of the project
@@ -506,7 +630,7 @@ export const assignTaskToUser = async (
   if (!projectMember) {
     throw new ApiError(
       HttpStatus.BAD_REQUEST,
-      'User is not a member of the project'
+      "User is not a member of the project"
     );
   }
 
@@ -523,7 +647,7 @@ export const assignTaskToUser = async (
   if (assignment) {
     throw new ApiError(
       HttpStatus.CONFLICT,
-      'User is already assigned to this task'
+      "User is already assigned to this task"
     );
   }
 
@@ -554,46 +678,17 @@ export const assignTaskToUser = async (
     // Create notification
     await createNotification(
       userId,
-      'New Task Assignment',
+      "New Task Assignment",
       `You have been assigned to task: ${task.title}`,
-      'TASK_ASSIGNED',
+      "TASK_ASSIGNED",
       taskId,
-      'task'
+      "task"
     );
 
     return newAssignment;
   });
 
   return result;
-};
-
-// Unassign user from task
-export const unassignTaskFromUser = async (
-  taskId: string,
-  userId: string
-): Promise<void> => {
-  // Check if assignment exists
-  const assignment = await prisma.taskAssignment.findUnique({
-    where: {
-      userId_taskId: {
-        userId,
-        taskId,
-      },
-    },
-  });
-
-  if (!assignment) {
-    throw new ApiError(
-      HttpStatus.NOT_FOUND,
-      'User is not assigned to this task'
-    );
-  }
-
-  await prisma.taskAssignment.delete({
-    where: {
-      id: assignment.id,
-    },
-  });
 };
 
 // Add task dependency
@@ -607,7 +702,7 @@ export const addTaskDependency = async (
   });
 
   if (!precedingTask) {
-    throw new ApiError(HttpStatus.NOT_FOUND, 'Preceding task not found');
+    throw new ApiError(HttpStatus.NOT_FOUND, "Preceding task not found");
   }
 
   const dependentTask = await prisma.task.findUnique({
@@ -615,14 +710,14 @@ export const addTaskDependency = async (
   });
 
   if (!dependentTask) {
-    throw new ApiError(HttpStatus.NOT_FOUND, 'Dependent task not found');
+    throw new ApiError(HttpStatus.NOT_FOUND, "Dependent task not found");
   }
 
   // Check if tasks are in the same project
   if (precedingTask.projectId !== dependentTask.projectId) {
     throw new ApiError(
       HttpStatus.BAD_REQUEST,
-      'Tasks must be in the same project'
+      "Tasks must be in the same project"
     );
   }
 
@@ -639,16 +734,19 @@ export const addTaskDependency = async (
   if (existingDependency) {
     throw new ApiError(
       HttpStatus.CONFLICT,
-      'Dependency already exists between these tasks'
+      "Dependency already exists between these tasks"
     );
   }
 
   // Check for circular dependencies
-  const circularCheck = await checkCircularDependency(precedingTaskId, dependentTaskId);
+  const circularCheck = await checkCircularDependency(
+    precedingTaskId,
+    dependentTaskId
+  );
   if (circularCheck) {
     throw new ApiError(
       HttpStatus.BAD_REQUEST,
-      'Adding this dependency would create a circular reference'
+      "Adding this dependency would create a circular reference"
     );
   }
 
@@ -694,7 +792,7 @@ export const removeTaskDependency = async (
   if (!dependency) {
     throw new ApiError(
       HttpStatus.NOT_FOUND,
-      'Dependency does not exist between these tasks'
+      "Dependency does not exist between these tasks"
     );
   }
 
@@ -747,4 +845,299 @@ const checkCircularDependency = async (
   }
 
   return false;
+};
+
+export const createTaskComment = async (
+  taskId: string,
+  userId: string,
+  content: string
+): Promise<any> => {
+  // Check if task exists
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: { project: true },
+  });
+
+  if (!task) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Task not found");
+  }
+
+  // Create comment and activity log in transaction
+  const result = await prisma.$transaction(async (tx) => {
+    // Create comment
+    const comment = await tx.taskComment.create({
+      data: {
+        content,
+        taskId,
+        authorId: userId,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    // Create task activity log
+    await tx.taskActivity.create({
+      data: {
+        type: "COMMENT",
+        description: "added a comment",
+        taskId,
+        userId,
+        metadata: {
+          commentId: comment.id,
+          content:
+            content.substring(0, 100) + (content.length > 100 ? "..." : ""),
+        },
+      },
+    });
+
+    // Create project activity log
+    await tx.projectActivity.create({
+      data: {
+        type: "COMMENT",
+        description: `commented on task "${task.title}"`,
+        projectId: task.projectId,
+        userId,
+        metadata: {
+          taskId: task.id,
+          taskTitle: task.title,
+          commentId: comment.id,
+        },
+      },
+    });
+
+    return comment;
+  });
+
+  return {
+    ...result,
+    isEdited: false,
+  };
+};
+
+// Get task comments
+export const getTaskComments = async (taskId: string): Promise<any[]> => {
+  const comments = await prisma.taskComment.findMany({
+    where: { taskId },
+    include: {
+      author: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return comments.map((comment) => ({
+    ...comment,
+    isEdited: comment.updatedAt.getTime() !== comment.createdAt.getTime(),
+  }));
+};
+
+// Update task comment
+export const updateTaskComment = async (
+  commentId: string,
+  userId: string,
+  content: string
+): Promise<any> => {
+  // Check if comment exists and belongs to user
+  const comment = await prisma.taskComment.findUnique({
+    where: { id: commentId },
+    include: {
+      author: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+
+  if (!comment) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Comment not found");
+  }
+
+  if (comment.authorId !== userId) {
+    throw new ApiError(
+      HttpStatus.FORBIDDEN,
+      "You can only edit your own comments"
+    );
+  }
+
+  const updatedComment = await prisma.taskComment.update({
+    where: { id: commentId },
+    data: { content },
+    include: {
+      author: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+
+  return {
+    ...updatedComment,
+    isEdited: true,
+  };
+};
+
+// Delete task comment
+export const deleteTaskComment = async (
+  commentId: string,
+  userId: string
+): Promise<void> => {
+  // Check if comment exists and belongs to user
+  const comment = await prisma.taskComment.findUnique({
+    where: { id: commentId },
+  });
+
+  if (!comment) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Comment not found");
+  }
+
+  if (comment.authorId !== userId) {
+    throw new ApiError(
+      HttpStatus.FORBIDDEN,
+      "You can only delete your own comments"
+    );
+  }
+
+  await prisma.taskComment.delete({
+    where: { id: commentId },
+  });
+};
+
+// Get task activity
+export const getTaskActivity = async (taskId: string): Promise<any[]> => {
+  const activities = await prisma.taskActivity.findMany({
+    where: { taskId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 50, // Limit to last 50 activities
+  });
+
+  return activities;
+};
+
+export const unassignTaskFromUser = async (
+  taskId: string,
+  assignmentId: string  // Changed from userId to assignmentId
+): Promise<void> => {
+  // Check if assignment exists and belongs to the task
+  const assignment = await prisma.taskAssignment.findUnique({
+    where: { id: assignmentId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      task: {
+        select: {
+          id: true,
+          title: true,
+          projectId: true,
+        },
+      },
+    },
+  });
+
+  if (!assignment || assignment.taskId !== taskId) {
+    throw new ApiError(
+      HttpStatus.NOT_FOUND,
+      "Assignment not found for this task"
+    );
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // Delete assignment
+    await tx.taskAssignment.delete({
+      where: { id: assignmentId },
+    });
+
+    // Create task activity
+    await tx.taskActivity.create({
+      data: {
+        type: "UNASSIGNED",
+        description: `unassigned ${assignment.user.name} from this task`,
+        taskId,
+        userId: assignment.userId, // This should be the current user ID in real implementation
+        metadata: {
+          unassignedUserId: assignment.userId,
+          unassignedUserName: assignment.user.name,
+        },
+      },
+    });
+
+    // Create project activity
+    await tx.projectActivity.create({
+      data: {
+        type: "TASK_UPDATED",
+        description: `unassigned ${assignment.user.name} from task "${assignment.task.title}"`,
+        projectId: assignment.task.projectId,
+        userId: assignment.userId, // This should be the current user ID
+        metadata: {
+          taskId: assignment.task.id,
+          taskTitle: assignment.task.title,
+          unassignedUserId: assignment.userId,
+          unassignedUserName: assignment.user.name,
+        },
+      },
+    });
+  });
+};
+
+export const getTaskAssignments = async (taskId: string): Promise<any[]> => {
+  // Check if task exists
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+  });
+
+  if (!task) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Task not found");
+  }
+
+  const assignments = await prisma.taskAssignment.findMany({
+    where: { taskId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  });
+
+  // Transform to match frontend expectations
+  return assignments.map(assignment => ({
+    ...assignment,
+    assignedAt: assignment.createdAt, // Frontend expects assignedAt field
+  }));
 };

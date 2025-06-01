@@ -2,6 +2,7 @@ import { Server as SocketIOServer } from "socket.io";
 import { Server as HttpServer } from "http";
 import { verifyToken } from "../utils/jwt.utils";
 import logger from "../config/logger";
+import { NextFunction } from "express";
 
 // Socket.io instance
 let io: SocketIOServer;
@@ -19,7 +20,7 @@ export const initializeSocketServer = (server: HttpServer) => {
   });
 
   // Authentication middleware
-  io.use((socket, next) => {
+  io.use((socket, next: any) => {
     try {
       const token = socket.handshake.auth.token;
 

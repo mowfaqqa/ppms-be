@@ -423,32 +423,6 @@ export const updateProjectMemberPermissions = async (
   });
 };
 
-// Remove member from project
-export const removeProjectMember = async (
-  projectId: string,
-  userId: string
-): Promise<void> => {
-  // Check if project member exists
-  const projectMember = await prisma.projectMember.findUnique({
-    where: {
-      userId_projectId: {
-        userId,
-        projectId,
-      },
-    },
-  });
-
-  if (!projectMember) {
-    throw new ApiError(HttpStatus.NOT_FOUND, "Project member not found");
-  }
-
-  await prisma.projectMember.delete({
-    where: {
-      id: projectMember.id,
-    },
-  });
-};
-
 // Get project stats
 export const getProjectStats = async (id: string) => {
   // Check if project exists
@@ -547,4 +521,361 @@ export const getProjectStats = async (id: string) => {
       isOverdue: now > endDate && project.status !== "COMPLETED",
     },
   };
+};
+
+// Create project comment
+export const createProjectComment = async (
+  projectId: string,
+  userId: string,
+  content: string
+): Promise<any> => {
+  // Check if project exists
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+  });
+
+  if (!project) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Project not found");
+  }
+
+  // Create comment and activity log in transaction
+  const result = await prisma.$transaction(async (tx) => {
+    // Create comment
+    const comment = await tx.projectComment.create({
+      data: {
+        content,
+        projectId,
+        authorId: userId,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    // Create activity log
+    await tx.projectActivity.create({
+      data: {
+        type: "COMMENT",
+        description: "added a comment",
+        projectId,
+        userId,
+        metadata: {
+          commentId: comment.id,
+          content:
+            content.substring(0, 100) + (content.length > 100 ? "..." : ""),
+        },
+      },
+    });
+
+    return comment;
+  });
+
+  return {
+    ...result,
+    isEdited: false,
+  };
+};
+
+// Get project comments
+export const getProjectComments = async (projectId: string): Promise<any[]> => {
+  const comments = await prisma.projectComment.findMany({
+    where: { projectId },
+    include: {
+      author: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return comments.map((comment) => ({
+    ...comment,
+    isEdited: comment.updatedAt.getTime() !== comment.createdAt.getTime(),
+  }));
+};
+
+// Update project comment
+export const updateProjectComment = async (
+  commentId: string,
+  userId: string,
+  content: string
+): Promise<any> => {
+  // Check if comment exists and belongs to user
+  const comment = await prisma.projectComment.findUnique({
+    where: { id: commentId },
+    include: {
+      author: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+
+  if (!comment) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Comment not found");
+  }
+
+  if (comment.authorId !== userId) {
+    throw new ApiError(
+      HttpStatus.FORBIDDEN,
+      "You can only edit your own comments"
+    );
+  }
+
+  const updatedComment = await prisma.projectComment.update({
+    where: { id: commentId },
+    data: { content },
+    include: {
+      author: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+
+  return {
+    ...updatedComment,
+    isEdited: true,
+  };
+};
+
+// Delete project comment
+export const deleteProjectComment = async (
+  commentId: string,
+  userId: string
+): Promise<void> => {
+  // Check if comment exists and belongs to user
+  const comment = await prisma.projectComment.findUnique({
+    where: { id: commentId },
+  });
+
+  if (!comment) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Comment not found");
+  }
+
+  if (comment.authorId !== userId) {
+    throw new ApiError(
+      HttpStatus.FORBIDDEN,
+      "You can only delete your own comments"
+    );
+  }
+
+  await prisma.projectComment.delete({
+    where: { id: commentId },
+  });
+};
+
+// Get project activity
+export const getProjectActivity = async (projectId: string): Promise<any[]> => {
+  const activities = await prisma.projectActivity.findMany({
+    where: { projectId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 50, // Limit to last 50 activities
+  });
+
+  return activities;
+};
+
+export const getProjectMembers = async (projectId: string): Promise<any[]> => {
+  // Check if project exists
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+  });
+
+  if (!project) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Project not found");
+  }
+
+  return prisma.projectMember.findMany({
+    where: { projectId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+      permissions: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+};
+
+// Helper function to get permissions by role
+const getPermissionsByRole = async (role: string): Promise<any[]> => {
+  const rolePermissionMap: { [key: string]: string[] } = {
+    PROJECT_MANAGER: [
+      "project.view",
+      "project.edit",
+      "project.delete",
+      "task.create",
+      "task.edit",
+      "task.delete",
+      "task.view",
+    ],
+    TEAM_MEMBER: ["project.view", "task.create", "task.edit", "task.view"],
+    OBSERVER: ["project.view", "task.view"],
+  };
+
+  const permissionNames =
+    rolePermissionMap[role] || rolePermissionMap["TEAM_MEMBER"];
+
+  return prisma.permission.findMany({
+    where: {
+      name: {
+        in: permissionNames,
+      },
+    },
+  });
+};
+
+// Update project member role
+export const updateProjectMemberRole = async (
+  projectId: string,
+  memberId: string,
+  role: string
+): Promise<any> => {
+  // Check if project member exists
+  const projectMember = await prisma.projectMember.findUnique({
+    where: { id: memberId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  if (!projectMember || projectMember.projectId !== projectId) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Project member not found");
+  }
+
+  // Get new permissions for the role
+  const rolePermissions = await getPermissionsByRole(role);
+  const permissionIds = rolePermissions.map((p) => p.id);
+
+  const result = await prisma.$transaction(async (tx) => {
+    // Update member role and permissions
+    const updatedMember = await tx.projectMember.update({
+      where: { id: memberId },
+      data: {
+        permissions: {
+          set: permissionIds.map((id) => ({ id })),
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+        permissions: true,
+      },
+    });
+
+    // Create activity log
+    await tx.projectActivity.create({
+      data: {
+        type: "MEMBER_UPDATED",
+        description: `updated ${projectMember.user.name}'s role to ${role}`,
+        projectId,
+        userId: projectMember.userId, // This should be the current user ID in real implementation
+        metadata: {
+          updatedUserId: projectMember.userId,
+          updatedUserName: projectMember.user.name,
+          oldRole: projectMember.role,
+          newRole: role,
+        },
+      },
+    });
+
+    return updatedMember;
+  });
+
+  return result;
+};
+
+// Update existing removeProjectMember to add activity logging
+export const removeProjectMember = async (
+  projectId: string,
+  memberId: string
+): Promise<void> => {
+  // Check if project member exists
+  const projectMember = await prisma.projectMember.findUnique({
+    where: { id: memberId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+
+  if (!projectMember || projectMember.projectId !== projectId) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Project member not found");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // Delete project member
+    await tx.projectMember.delete({
+      where: { id: memberId },
+    });
+
+    // Create activity log
+    await tx.projectActivity.create({
+      data: {
+        type: "MEMBER_REMOVED",
+        description: `removed ${projectMember.user.name} from the project`,
+        projectId,
+        userId: projectMember.userId, // This should be the current user ID in real implementation
+        metadata: {
+          removedUserId: projectMember.userId,
+          removedUserName: projectMember.user.name,
+        },
+      },
+    });
+  });
 };

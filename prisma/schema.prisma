@@ -9,17 +9,24 @@ datasource db {
 
 // User model with role-based access
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String
-  password      String    // Hashed
-  role          Role      @default(TEAM_MEMBER)
-  projects      ProjectMember[]
-  tasks         TaskAssignment[]
-  timeEntries   TimeEntry[]
-  notifications Notification[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                String            @id @default(cuid())
+  email             String            @unique
+  name              String
+  password          String // Hashed
+  role              Role              @default(TEAM_MEMBER)
+  projects          ProjectMember[]
+  tasks             TaskAssignment[]
+  projectComments   ProjectComment[]
+  projectActivities ProjectActivity[]
+  timeEntries       TimeEntry[]
+  acttivity         Activity[]
+  notifications     Notification[]
+  taskComments      TaskComment[]
+  taskActivities    TaskActivity[]
+  activeTimer       ActiveTimer?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  ProjectFile       ProjectFile[]
 }
 
 enum Role {
@@ -30,43 +37,50 @@ enum Role {
 
 // Portfolio (annual collection)
 model Portfolio {
-  id            String    @id @default(cuid())
-  name          String
-  year          Int
-  description   String?
-  pillars       Pillar[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  name        String
+  year        Int
+  description String?
+  budget      Float? // Total portfolio budget
+  startDate   DateTime? // Portfolio start date  
+  endDate     DateTime? // Portfolio end date
+  status      String? // Portfolio status
+  pillars     Pillar[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 // Pillars (categories)
 model Pillar {
-  id            String    @id @default(cuid())
-  name          String
-  description   String?
-  portfolioId   String
-  portfolio     Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
-  projects      Project[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  portfolioId String
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  projects    Project[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 // Projects within pillars
 model Project {
-  id            String    @id @default(cuid())
-  name          String
-  description   String?
-  startDate     DateTime
-  endDate       DateTime
-  status        ProjectStatus @default(PLANNING)
-  pillarId      String
-  pillar        Pillar    @relation(fields: [pillarId], references: [id], onDelete: Cascade)
-  tasks         Task[]
-  members       ProjectMember[]
-  files         File[]
-  budget        Budget?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String            @id @default(cuid())
+  name         String
+  description  String?
+  startDate    DateTime
+  endDate      DateTime
+  status       ProjectStatus     @default(PLANNING)
+  pillarId     String
+  pillar       Pillar            @relation(fields: [pillarId], references: [id], onDelete: Cascade)
+  tasks        Task[]
+  members      ProjectMember[]
+  files        File[]
+  budget       Budget?
+  comments     ProjectComment[]
+  activities   ProjectActivity[]
+  projectFiles ProjectFile[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 }
 
 enum ProjectStatus {
@@ -79,39 +93,114 @@ enum ProjectStatus {
 
 // Project members with permissions
 model ProjectMember {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projectId     String
-  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  permissions   Permission[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String            @id @default(cuid())
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  permissions Permission[]
+  role        ProjectMemberRole @default(TEAM_MEMBER)
+  joinedAt    DateTime          @default(now())
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
   @@unique([userId, projectId])
 }
 
+enum ProjectMemberRole {
+  PROJECT_MANAGER
+  TEAM_MEMBER
+  OBSERVER
+}
+
+model ProjectComment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  projectId String
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("project_comments")
+}
+
+// NEW MODEL: Project Activity
+model ProjectActivity {
+  id          String       @id @default(cuid())
+  type        ActivityType
+  description String
+  projectId   String
+  userId      String
+  metadata    Json? // Store additional activity data
+  createdAt   DateTime     @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("project_activities")
+}
+
+// NEW ENUM
+enum ActivityType {
+  COMMENT
+  TASK_CREATED
+  TASK_UPDATED
+  TASK_DELETED
+  MEMBER_ADDED
+  MEMBER_REMOVED
+  MEMBER_UPDATED
+  FILE_UPLOADED
+  FILE_DELETED
+  PROJECT_UPDATED
+  PROJECT_CREATED
+}
+
+// NEW MODEL: Project Files
+model ProjectFile {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String
+  size         Int
+  mimeType     String
+  version      Int      @default(1)
+  description  String?
+  projectId    String
+  uploadedById String
+  uploadedAt   DateTime @default(now())
+
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy User    @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@map("project_files")
+}
+
 // Tasks and subtasks
 model Task {
-  id            String    @id @default(cuid())
-  title         String
-  description   String?
-  status        TaskStatus @default(TODO)
-  priority      Priority  @default(MEDIUM)
-  projectId     String
-  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  parentTaskId  String?   // For subtasks
-  parentTask    Task?     @relation("SubTasks", fields: [parentTaskId], references: [id])
-  subtasks      Task[]    @relation("SubTasks")
-  assignments   TaskAssignment[]
-  dependencies  TaskDependency[] @relation("DependentTask")
-  dependents    TaskDependency[] @relation("PrecedingTask")
-  timeEntries   TimeEntry[]
-  files         File[]
-  startDate     DateTime?
-  endDate       DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String           @id @default(cuid())
+  title        String
+  description  String?
+  status       TaskStatus       @default(TODO)
+  priority     Priority         @default(MEDIUM)
+  projectId    String
+  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parentTaskId String? // For subtasks
+  parentTask   Task?            @relation("SubTasks", fields: [parentTaskId], references: [id])
+  subtasks     Task[]           @relation("SubTasks")
+  assignments  TaskAssignment[]
+  dependencies TaskDependency[] @relation("DependentTask")
+  dependents   TaskDependency[] @relation("PrecedingTask")
+  timeEntries  TimeEntry[]
+  files        File[]
+  comments     TaskComment[]
+  activities   TaskActivity[]
+  activeTimers ActiveTimer[]
+  startDate    DateTime?
+  endDate      DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 }
 
 enum TaskStatus {
@@ -130,105 +219,103 @@ enum Priority {
 
 // Task dependencies
 model TaskDependency {
-  id              String    @id @default(cuid())
+  id              String   @id @default(cuid())
   precedingTaskId String
-  precedingTask   Task      @relation("PrecedingTask", fields: [precedingTaskId], references: [id], onDelete: Cascade)
+  precedingTask   Task     @relation("PrecedingTask", fields: [precedingTaskId], references: [id], onDelete: Cascade)
   dependentTaskId String
-  dependentTask   Task      @relation("DependentTask", fields: [dependentTaskId], references: [id], onDelete: Cascade)
-  createdAt       DateTime  @default(now())
+  dependentTask   Task     @relation("DependentTask", fields: [dependentTaskId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
 
   @@unique([precedingTaskId, dependentTaskId])
 }
 
 // Task assignments
 model TaskAssignment {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  taskId        String
-  task          Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, taskId])
 }
 
-// Time tracking
-model TimeEntry {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  taskId        String
-  task          Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  startTime     DateTime
-  endTime       DateTime?
-  description   String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-}
-
 // File uploads with version control
 model File {
-  id            String    @id @default(cuid())
+  id            String   @id @default(cuid())
   name          String
   url           String
   type          String
   size          Int
   projectId     String?
-  project       Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  project       Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   taskId        String?
-  task          Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
-  versionGroup  String    // Group ID for version control
-  versionNumber Int       // Version number within the group
-  createdAt     DateTime  @default(now())
+  task          Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  versionGroup  String // Group ID for version control
+  versionNumber Int // Version number within the group
+  createdAt     DateTime @default(now())
   createdById   String
 }
 
 // Budget tracking
 model Budget {
-  id            String    @id @default(cuid())
-  projectId     String    @unique
-  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  totalAmount   Float
-  allocations   BudgetAllocation[]
-  expenses      Expense[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String             @id @default(cuid())
+  projectId   String             @unique
+  project     Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  totalAmount Float
+  allocations BudgetAllocation[]
+  expenses    Expense[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 }
 
 model BudgetAllocation {
-  id            String    @id @default(cuid())
-  budgetId      String
-  budget        Budget    @relation(fields: [budgetId], references: [id], onDelete: Cascade)
-  category      String
-  amount        Float
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  budgetId  String
+  budget    Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  category  String
+  amount    Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Expense {
-  id            String    @id @default(cuid())
-  budgetId      String
-  budget        Budget    @relation(fields: [budgetId], references: [id], onDelete: Cascade)
-  description   String
-  amount        Float
-  date          DateTime
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String   @id @default(cuid())
+  budgetId    String
+  budget      Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  description String
+  amount      Float
+  date        DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 // Notification system
 model Notification {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title         String
-  message       String
-  type          NotificationType
-  read          Boolean   @default(false)
-  entityId      String?   // ID of related entity (task, project, etc.)
-  entityType    String?   // Type of related entity
-  createdAt     DateTime  @default(now())
+  id         String           @id @default(cuid())
+  userId     String
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String
+  message    String
+  type       NotificationType
+  read       Boolean          @default(false)
+  entityId   String? // ID of related entity (task, project, etc.)
+  entityType String? // Type of related entity
+  createdAt  DateTime         @default(now())
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  entityType  String // "portfolio", "pillar", "project", "task"
+  entityId    String
+  action      String // "created", "updated", "deleted", "assigned", etc.
+  description String
+  metadata    Json?
+  createdAt   DateTime @default(now())
 }
 
 enum NotificationType {
@@ -241,8 +328,82 @@ enum NotificationType {
 
 // Permissions
 model Permission {
-  id            String    @id @default(cuid())
-  name          String    @unique
-  description   String?
+  id             String          @id @default(cuid())
+  name           String          @unique
+  description    String?
   projectMembers ProjectMember[]
+}
+
+// Task Comments
+model TaskComment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  taskId    String
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("task_comments")
+}
+
+// Task Activity
+model TaskActivity {
+  id          String           @id @default(cuid())
+  type        TaskActivityType
+  description String
+  taskId      String
+  userId      String
+  metadata    Json? // Store additional activity data
+  createdAt   DateTime         @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("task_activities")
+}
+
+// Active Timer for time tracking
+model ActiveTimer {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  taskId    String
+  startTime DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("active_timers")
+}
+
+//Time Tracking
+model TimeEntry {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId      String
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  startTime   DateTime
+  endTime     DateTime?
+  duration    Int?
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("time_entries")
+}
+
+// New enums
+enum TaskActivityType {
+  COMMENT
+  STATUS_CHANGED
+  PRIORITY_CHANGED
+  ASSIGNED
+  UNASSIGNED
+  TIME_LOGGED
+  SUBTASK_CREATED
+  TASK_UPDATED
 }

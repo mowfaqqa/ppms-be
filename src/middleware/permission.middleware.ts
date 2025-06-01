@@ -17,7 +17,7 @@ export const checkProjectPermission = (permission: string) => {
         return next();
       }
 
-      const projectId = req.params.projectId || req.body.projectId;
+      const projectId = req.params?.projectId || req.body.projectId;
 
       if (!projectId) {
         throw new ApiError(HttpStatus.BAD_REQUEST, "Project ID is required");
@@ -109,7 +109,7 @@ export const checkTaskPermission = (permission: string) => {
 // Check user assignment limit
 export const checkAssignmentLimit = async (
   req: Request,
-  res: Response,
+  res: any,
   next: NextFunction
 ) => {
   try {
