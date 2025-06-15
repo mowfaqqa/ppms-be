@@ -1,4 +1,4 @@
-import jwt, { SignOptions, JwtPayload, VerifyErrors } from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
 import { Role } from "@prisma/client";
 
 // User payload for JWT
