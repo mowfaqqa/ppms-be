@@ -41,7 +41,7 @@ if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 const corsOptions = {
-  origin: ["http://localhost:3000"],
+  origin: ["http://localhost:3000", "https://ppms-smoky.vercel.app/"],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true, // for cookies, authorization headers, etc.
 };
