@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // User model with role-based access
@@ -23,6 +24,7 @@ model User {
   notifications     Notification[]
   taskComments      TaskComment[]
   taskActivities    TaskActivity[]
+  backlogItems      BacklogItem[]
   activeTimer       ActiveTimer?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
@@ -64,14 +66,14 @@ model Pillar {
 
 // Projects within pillars
 model Project {
-  id           String            @id @default(cuid())
+  id           String              @id @default(cuid())
   name         String
   description  String?
   startDate    DateTime
   endDate      DateTime
-  status       ProjectStatus     @default(PLANNING)
+  status       ProjectStatus       @default(PLANNING)
   pillarId     String
-  pillar       Pillar            @relation(fields: [pillarId], references: [id], onDelete: Cascade)
+  pillar       Pillar              @relation(fields: [pillarId], references: [id], onDelete: Cascade)
   tasks        Task[]
   members      ProjectMember[]
   files        File[]
@@ -79,8 +81,11 @@ model Project {
   comments     ProjectComment[]
   activities   ProjectActivity[]
   projectFiles ProjectFile[]
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  sprints      Sprint[]
+  backlogItems BacklogItem[]
+  methodology  ProjectMethodology?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
 }
 
 enum ProjectStatus {
@@ -156,6 +161,17 @@ enum ActivityType {
   FILE_DELETED
   PROJECT_UPDATED
   PROJECT_CREATED
+  SPRINT_DELETED
+  SPRINT_CREATED
+  SPRINT_UPDATED
+  SPRINT_COMPLETED
+  BACKLOG_ITEM_CREATED
+  BACKLOG_ITEM_DELETED
+  BACKLOG_REORDERED
+  BACKLOG_ITEM_MOVED_TO_SPRINT
+  BACKLOG_ITEM_MOVED_TO_BACKLOG
+  TASK_MOVED_TO_SPRINT
+  TASK_MOVED_TO_BACKLOG
 }
 
 // NEW MODEL: Project Files
@@ -179,28 +195,32 @@ model ProjectFile {
 
 // Tasks and subtasks
 model Task {
-  id           String           @id @default(cuid())
-  title        String
-  description  String?
-  status       TaskStatus       @default(TODO)
-  priority     Priority         @default(MEDIUM)
-  projectId    String
-  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  parentTaskId String? // For subtasks
-  parentTask   Task?            @relation("SubTasks", fields: [parentTaskId], references: [id])
-  subtasks     Task[]           @relation("SubTasks")
-  assignments  TaskAssignment[]
-  dependencies TaskDependency[] @relation("DependentTask")
-  dependents   TaskDependency[] @relation("PrecedingTask")
-  timeEntries  TimeEntry[]
-  files        File[]
-  comments     TaskComment[]
-  activities   TaskActivity[]
-  activeTimers ActiveTimer[]
-  startDate    DateTime?
-  endDate      DateTime?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  id            String           @id @default(cuid())
+  title         String
+  description   String?
+  status        TaskStatus       @default(TODO)
+  priority      Priority         @default(MEDIUM)
+  projectId     String
+  project       Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parentTaskId  String? // For subtasks
+  parentTask    Task?            @relation("SubTasks", fields: [parentTaskId], references: [id])
+  subtasks      Task[]           @relation("SubTasks")
+  assignments   TaskAssignment[]
+  dependencies  TaskDependency[] @relation("DependentTask")
+  dependents    TaskDependency[] @relation("PrecedingTask")
+  timeEntries   TimeEntry[]
+  files         File[]
+  comments      TaskComment[]
+  activities    TaskActivity[]
+  activeTimers  ActiveTimer[]
+  sprintId      String?
+  sprint        Sprint?          @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  backlogItemId String? // Link task to backlog item
+  backlogItem   BacklogItem?     @relation(fields: [backlogItemId], references: [id], onDelete: SetNull)
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 }
 
 enum TaskStatus {
@@ -406,4 +426,74 @@ enum TaskActivityType {
   TIME_LOGGED
   SUBTASK_CREATED
   TASK_UPDATED
+  TASK_CREATED
+}
+
+// Sprint model - project-specific with custom duration
+model Sprint {
+  id           String        @id @default(cuid())
+  name         String
+  goal         String? // Sprint goal/objective
+  startDate    DateTime
+  endDate      DateTime
+  status       SprintStatus  @default(PLANNED)
+  projectId    String
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks        Task[] // Tasks assigned to this sprint
+  backlogItems BacklogItem[] // Backlog items pulled into sprint
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([projectId, status])
+}
+
+enum SprintStatus {
+  PLANNED // Sprint created but not started
+  ACTIVE // Currently running sprint
+  COMPLETED // Sprint finished
+  CANCELLED // Sprint cancelled
+}
+
+// Backlog items - separate from tasks for better organization
+model BacklogItem {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  priority    Int           @default(0) // Lower number = higher priority
+  status      BacklogStatus @default(TODO)
+  projectId   String
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sprintId    String? // Null = in product backlog, set = in sprint backlog
+  sprint      Sprint?       @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  tasks       Task[] // Tasks created from this backlog item
+  createdById String
+  createdBy   User          @relation(fields: [createdById], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([projectId, priority])
+  @@index([sprintId])
+}
+
+enum BacklogStatus {
+  TODO // Ready for development
+  IN_PROGRESS // Being worked on
+  DONE // Completed
+  CANCELLED // Cancelled/removed
+}
+
+// Project methodology configuration
+model ProjectMethodology {
+  id          String      @id @default(cuid())
+  projectId   String      @unique
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  methodology Methodology @default(SCRUM)
+  settings    Json? // Store methodology-specific settings
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+enum Methodology {
+  SCRUM
+  KANBAN
 }

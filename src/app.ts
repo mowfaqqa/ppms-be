@@ -20,6 +20,8 @@ import timeRoutes from "./routes/time.routes";
 import fileRoutes from "./routes/file.routes";
 import budgetRoutes from "./routes/budget.routes";
 import notificationRoutes from "./routes/notification.routes";
+import sprintRoutes from "./routes/sprint.routes";
+import backlogRoutes from "./routes/backlog.routes";
 
 // Load environment variables
 config();
@@ -63,6 +65,8 @@ app.use("/api/time", timeRoutes);
 app.use("/api/files", fileRoutes);
 app.use("/api/budgets", budgetRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api", sprintRoutes);
+app.use("/api", backlogRoutes);
 
 // API health check route
 app.get("/api/health", (req, res) => {

@@ -16,6 +16,8 @@ export const createTask = async (
     startDate?: Date;
     endDate?: Date;
     assigneeIds?: string[];
+    backlogItemId?: string;
+    sprintId?: string;
   },
   creatorId: string
 ): Promise<Task> => {
@@ -28,6 +30,36 @@ export const createTask = async (
     throw new ApiError(HttpStatus.NOT_FOUND, "Project not found");
   }
 
+  let backlogItem = null;
+  if (data.backlogItemId) {
+    backlogItem = await prisma.backlogItem.findUnique({
+      where: { id: data.backlogItemId },
+    });
+    if (!backlogItem) {
+      throw new ApiError(HttpStatus.NOT_FOUND, "Backlog item not found");
+    }
+    if (backlogItem.projectId !== data.projectId) {
+      throw new ApiError(
+        HttpStatus.BAD_REQUEST,
+        "Backlog item must belong to the same project"
+      );
+    }
+    if (data.sprintId) {
+      const sprint = await prisma.sprint.findUnique({
+        where: { id: data.sprintId },
+      });
+      if (!sprint) {
+        throw new ApiError(HttpStatus.NOT_FOUND, "Sprint not found");
+      }
+
+      if (sprint.projectId !== data.projectId) {
+        throw new ApiError(
+          HttpStatus.BAD_REQUEST,
+          "Sprint must belong to the same project"
+        );
+      }
+    }
+  }
   // If parent task specified, check if it exists and belongs to the same project
   if (data.parentTaskId) {
     const parentTask = await prisma.task.findUnique({
@@ -87,12 +119,15 @@ export const createTask = async (
         priority: data.priority || "MEDIUM",
         projectId: data.projectId,
         parentTaskId: data.parentTaskId,
+        backlogItemId: data.backlogItemId,
+        sprintId: data.sprintId,
         startDate: data.startDate ? new Date(data.startDate) : null,
         endDate: data.endDate ? new Date(data.endDate) : null,
       },
     });
 
     // Create task assignments
+    const assigneeIds = data.assigneeIds || [];
     if (assigneeIds.length > 0) {
       await Promise.all(
         assigneeIds.map(async (userId) => {
@@ -133,15 +168,20 @@ export const createTask = async (
     await tx.projectActivity.create({
       data: {
         type: "TASK_CREATED",
-        description: `created task "${task.title}"`,
+ description: backlogItem 
+          ? `created task "${task.title}" from backlog item "${backlogItem.title}"`
+          : `created task "${task.title}"`,
         projectId: data.projectId,
         userId: creatorId,
-        metadata: {
+       metadata: {
           taskId: task.id,
           taskTitle: task.title,
           priority: task.priority,
           status: task.status,
           isSubtask: !!data.parentTaskId,
+          backlogItemId: data.backlogItemId,
+          backlogItemTitle: backlogItem?.title,
+          sprintId: data.sprintId,
         },
       },
     });
@@ -151,7 +191,744 @@ export const createTask = async (
 
   return result;
 };
+export const moveTaskToSprint = async (
+  taskId: string,
+  sprintId: string,
+  userId: string
+): Promise<Task> => {
+  // Check if task exists
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: {
+      sprint: {
+        select: { name: true },
+      },
+      backlogItem: true,
+    },
+  });
 
+  if (!task) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Task not found");
+  }
+
+  // Check if sprint exists and belongs to same project
+  const sprint = await prisma.sprint.findUnique({
+    where: { id: sprintId },
+  });
+
+  if (!sprint) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Sprint not found");
+  }
+
+  if (sprint.projectId !== task.projectId) {
+    throw new ApiError(
+      HttpStatus.BAD_REQUEST,
+      "Sprint and task must belong to the same project"
+    );
+  }
+
+  const updatedTask = await prisma.$transaction(async (tx) => {
+    const updated = await tx.task.update({
+      where: { id: taskId },
+      data: { sprintId },
+    });
+
+    // Also move the associated backlog item if it exists
+    if (task.backlogItemId) {
+      await tx.backlogItem.update({
+        where: { id: task.backlogItemId },
+        data: { sprintId },
+      });
+    }
+
+    // Create task activity
+    await tx.taskActivity.create({
+      data: {
+        type: "TASK_UPDATED",
+        description: `moved task to sprint "${sprint.name}"`,
+        taskId,
+        userId,
+        metadata: {
+          action: "moved_to_sprint",
+          sprintId: sprint.id,
+          sprintName: sprint.name,
+          fromSprintId: task.sprintId,
+          fromSprintName: task.sprint?.name,
+        },
+      },
+    });
+
+    // Create project activity
+    await tx.projectActivity.create({
+      data: {
+        type: "TASK_MOVED_TO_SPRINT",
+        description: `moved task "${task.title}" to sprint "${sprint.name}"`,
+        projectId: task.projectId,
+        userId,
+        metadata: {
+          taskId: task.id,
+          taskTitle: task.title,
+          sprintId: sprint.id,
+          sprintName: sprint.name,
+        },
+      },
+    });
+
+    return updated;
+  });
+
+  return updatedTask;
+};
+
+export const moveTaskToBacklog = async (
+  taskId: string,
+  userId: string
+): Promise<Task> => {
+  // Check if task exists
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: {
+      sprint: {
+        select: { name: true },
+      },
+      backlogItem: true,
+    },
+  });
+
+  if (!task) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Task not found");
+  }
+
+  const updatedTask = await prisma.$transaction(async (tx) => {
+    const updated = await tx.task.update({
+      where: { id: taskId },
+      data: { sprintId: null },
+    });
+
+    // Also move the associated backlog item back to product backlog
+    if (task.backlogItemId) {
+      await tx.backlogItem.update({
+        where: { id: task.backlogItemId },
+        data: { sprintId: null },
+      });
+    }
+
+    // Create task activity
+    await tx.taskActivity.create({
+      data: {
+        type: "TASK_UPDATED",
+        description: `moved task back to product backlog from sprint "${task.sprint?.name}"`,
+        taskId,
+        userId,
+        metadata: {
+          action: "moved_to_backlog",
+          fromSprintId: task.sprintId,
+          fromSprintName: task.sprint?.name,
+        },
+      },
+    });
+
+    // Create project activity
+    await tx.projectActivity.create({
+      data: {
+        type: "TASK_MOVED_TO_BACKLOG",
+        description: `moved task "${task.title}" back to product backlog`,
+        projectId: task.projectId,
+        userId,
+        metadata: {
+          taskId: task.id,
+          taskTitle: task.title,
+          fromSprintId: task.sprintId,
+          fromSprintName: task.sprint?.name,
+        },
+      },
+    });
+
+    return updated;
+  });
+
+  return updatedTask;
+};
+export const getSprintTasks = async (
+  sprintId: string,
+  filters?: {
+    status?: TaskStatus;
+    priority?: Priority;
+    assigneeId?: string;
+  }
+): Promise<any[]> => {
+  const where: any = { sprintId };
+
+  if (filters?.status) {
+    where.status = filters.status;
+  }
+
+  if (filters?.priority) {
+    where.priority = filters.priority;
+  }
+
+  if (filters?.assigneeId) {
+    where.assignments = {
+      some: {
+        userId: filters.assigneeId,
+      },
+    };
+  }
+
+  return prisma.task.findMany({
+    where,
+    include: {
+      backlogItem: {
+        select: {
+          id: true,
+          title: true,
+          priority: true,
+        },
+      },
+      assignments: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+      _count: {
+        select: {
+          subtasks: true,
+          timeEntries: true,
+        },
+      },
+    },
+    orderBy: [
+      {
+        priority: "desc",
+      },
+      {
+        createdAt: "desc",
+      },
+    ],
+  });
+};
+
+// Get backlog tasks (tasks not in any sprint)
+export const getBacklogTasks = async (
+  projectId: string,
+  filters?: {
+    status?: TaskStatus;
+    priority?: Priority;
+    assigneeId?: string;
+    hasBacklogItem?: boolean;
+  }
+): Promise<any[]> => {
+  const where: any = {
+    projectId,
+    sprintId: null, // Only tasks not in any sprint
+  };
+
+  if (filters?.status) {
+    where.status = filters.status;
+  }
+
+  if (filters?.priority) {
+    where.priority = filters.priority;
+  }
+
+  if (filters?.assigneeId) {
+    where.assignments = {
+      some: {
+        userId: filters.assigneeId,
+      },
+    };
+  }
+
+  if (filters?.hasBacklogItem !== undefined) {
+    where.backlogItemId = filters.hasBacklogItem ? { not: null } : null;
+  }
+
+  return prisma.task.findMany({
+    where,
+    include: {
+      backlogItem: {
+        select: {
+          id: true,
+          title: true,
+          priority: true,
+          status: true,
+        },
+      },
+      assignments: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+      _count: {
+        select: {
+          subtasks: true,
+          timeEntries: true,
+        },
+      },
+    },
+    orderBy: [
+      {
+        priority: "desc",
+      },
+      {
+        createdAt: "desc",
+      },
+    ],
+  });
+};
+export const linkTaskToBacklogItem = async (
+  taskId: string,
+  backlogItemId: string,
+  userId: string
+): Promise<Task> => {
+  // Check if task exists
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+  });
+
+  if (!task) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Task not found");
+  }
+
+  // Check if backlog item exists and belongs to same project
+  const backlogItem = await prisma.backlogItem.findUnique({
+    where: { id: backlogItemId },
+  });
+
+  if (!backlogItem) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Backlog item not found");
+  }
+
+  if (backlogItem.projectId !== task.projectId) {
+    throw new ApiError(
+      HttpStatus.BAD_REQUEST,
+      "Task and backlog item must belong to the same project"
+    );
+  }
+
+  const updatedTask = await prisma.$transaction(async (tx) => {
+    const updated = await tx.task.update({
+      where: { id: taskId },
+      data: { 
+        backlogItemId,
+        sprintId: backlogItem.sprintId || task.sprintId, // Inherit sprint from backlog item if available
+      },
+    });
+
+    // Create task activity
+    await tx.taskActivity.create({
+      data: {
+        type: "TASK_UPDATED",
+        description: `linked task to backlog item "${backlogItem.title}"`,
+        taskId,
+        userId,
+        metadata: {
+          action: "linked_to_backlog_item",
+          backlogItemId: backlogItem.id,
+          backlogItemTitle: backlogItem.title,
+        },
+      },
+    });
+
+    return updated;
+  });
+
+  return updatedTask;
+};
+
+// Unlink task from backlog item
+export const unlinkTaskFromBacklogItem = async (
+  taskId: string,
+  userId: string
+): Promise<Task> => {
+  // Check if task exists
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: {
+      backlogItem: {
+        select: {
+          id: true,
+          title: true,
+        },
+      },
+    },
+  });
+
+  if (!task) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Task not found");
+  }
+
+  if (!task.backlogItemId) {
+    throw new ApiError(
+      HttpStatus.BAD_REQUEST,
+      "Task is not linked to any backlog item"
+    );
+  }
+
+  const updatedTask = await prisma.$transaction(async (tx) => {
+    const updated = await tx.task.update({
+      where: { id: taskId },
+      data: { backlogItemId: null },
+    });
+
+    // Create task activity
+    await tx.taskActivity.create({
+      data: {
+        type: "TASK_UPDATED",
+        description: `unlinked task from backlog item "${task.backlogItem?.title}"`,
+        taskId,
+        userId,
+        metadata: {
+          action: "unlinked_from_backlog_item",
+          backlogItemId: task.backlogItemId,
+          backlogItemTitle: task.backlogItem?.title,
+        },
+      },
+    });
+
+    return updated;
+  });
+
+  return updatedTask;
+};
+
+// Get task backlog context (enhanced task details with backlog info)
+export const getTaskWithBacklogContext = async (taskId: string): Promise<any> => {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: {
+      project: {
+        select: {
+          id: true,
+          name: true,
+          pillar: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+      sprint: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          startDate: true,
+          endDate: true,
+        },
+      },
+      backlogItem: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          priority: true,
+          status: true,
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+      parentTask: {
+        select: {
+          id: true,
+          title: true,
+          backlogItem: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+      },
+      subtasks: {
+        include: {
+          assignments: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          backlogItem: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+      },
+      assignments: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
+      dependencies: {
+        include: {
+          precedingTask: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              backlogItem: {
+                select: {
+                  id: true,
+                  title: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      dependents: {
+        include: {
+          dependentTask: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              backlogItem: {
+                select: {
+                  id: true,
+                  title: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      timeEntries: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: {
+          startTime: "desc",
+        },
+      },
+      files: {
+        orderBy: [
+          {
+            versionGroup: "asc",
+          },
+          {
+            versionNumber: "desc",
+          },
+        ],
+      },
+    },
+  });
+
+  if (!task) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Task not found");
+  }
+
+  return task;
+};
+
+// Bulk move tasks to sprint
+export const bulkMoveTasksToSprint = async (
+  taskIds: string[],
+  sprintId: string,
+  userId: string
+): Promise<{ movedCount: number; errors: string[] }> => {
+  // Validate sprint exists
+  const sprint = await prisma.sprint.findUnique({
+    where: { id: sprintId },
+  });
+
+  if (!sprint) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Sprint not found");
+  }
+
+  const errors: string[] = [];
+  let movedCount = 0;
+
+  // Process each task
+  for (const taskId of taskIds) {
+    try {
+      const task = await prisma.task.findUnique({
+        where: { id: taskId },
+        include: { backlogItem: true },
+      });
+
+      if (!task) {
+        errors.push(`Task ${taskId} not found`);
+        continue;
+      }
+
+      if (task.projectId !== sprint.projectId) {
+        errors.push(`Task ${task.title} belongs to different project`);
+        continue;
+      }
+
+      // Move task and its backlog item
+      await prisma.$transaction(async (tx) => {
+        await tx.task.update({
+          where: { id: taskId },
+          data: { sprintId },
+        });
+
+        if (task.backlogItemId) {
+          await tx.backlogItem.update({
+            where: { id: task.backlogItemId },
+            data: { sprintId },
+          });
+        }
+
+        // Create activity log
+        await tx.projectActivity.create({
+          data: {
+            type: "TASK_MOVED_TO_SPRINT",
+            description: `moved task "${task.title}" to sprint "${sprint.name}" (bulk operation)`,
+            projectId: task.projectId,
+            userId,
+            metadata: {
+              taskId: task.id,
+              taskTitle: task.title,
+              sprintId: sprint.id,
+              sprintName: sprint.name,
+              bulkOperation: true,
+            },
+          },
+        });
+      });
+
+      movedCount++;
+    } catch (error) {
+      errors.push(`Error moving task ${taskId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  return { movedCount, errors };
+};
+
+// Bulk move tasks to backlog
+export const bulkMoveTasksToBacklog = async (
+  taskIds: string[],
+  userId: string
+): Promise<{ movedCount: number; errors: string[] }> => {
+  const errors: string[] = [];
+  let movedCount = 0;
+
+  // Process each task
+  for (const taskId of taskIds) {
+    try {
+      const task = await prisma.task.findUnique({
+        where: { id: taskId },
+        include: { 
+          sprint: { select: { name: true } },
+          backlogItem: true 
+        },
+      });
+
+      if (!task) {
+        errors.push(`Task ${taskId} not found`);
+        continue;
+      }
+
+      // Move task and its backlog item
+      await prisma.$transaction(async (tx) => {
+        await tx.task.update({
+          where: { id: taskId },
+          data: { sprintId: null },
+        });
+
+        if (task.backlogItemId) {
+          await tx.backlogItem.update({
+            where: { id: task.backlogItemId },
+            data: { sprintId: null },
+          });
+        }
+
+        // Create activity log
+        await tx.projectActivity.create({
+          data: {
+            type: "TASK_MOVED_TO_BACKLOG",
+            description: `moved task "${task.title}" to backlog from sprint "${task.sprint?.name}" (bulk operation)`,
+            projectId: task.projectId,
+            userId,
+            metadata: {
+              taskId: task.id,
+              taskTitle: task.title,
+              fromSprintName: task.sprint?.name,
+              bulkOperation: true,
+            },
+          },
+        });
+      });
+
+      movedCount++;
+    } catch (error) {
+      errors.push(`Error moving task ${taskId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  return { movedCount, errors };
+};
+
+// Get tasks by backlog item
+export const getTasksByBacklogItem = async (backlogItemId: string): Promise<any[]> => {
+  return prisma.task.findMany({
+    where: { backlogItemId },
+    include: {
+      sprint: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+        },
+      },
+      assignments: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+      _count: {
+        select: {
+          subtasks: true,
+          timeEntries: true,
+        },
+      },
+    },
+    orderBy: [
+      { priority: "desc" },
+      { createdAt: "desc" },
+    ],
+  });
+};
 // Get all tasks (with optional filters)
 export const getAllTasks = async (filters?: {
   projectId?: string;
@@ -1041,7 +1818,7 @@ export const getTaskActivity = async (taskId: string): Promise<any[]> => {
 
 export const unassignTaskFromUser = async (
   taskId: string,
-  assignmentId: string  // Changed from userId to assignmentId
+  assignmentId: string // Changed from userId to assignmentId
 ): Promise<void> => {
   // Check if assignment exists and belongs to the task
   const assignment = await prisma.taskAssignment.findUnique({
@@ -1131,12 +1908,12 @@ export const getTaskAssignments = async (taskId: string): Promise<any[]> => {
       },
     },
     orderBy: {
-      createdAt: 'asc',
+      createdAt: "asc",
     },
   });
 
   // Transform to match frontend expectations
-  return assignments.map(assignment => ({
+  return assignments.map((assignment) => ({
     ...assignment,
     assignedAt: assignment.createdAt, // Frontend expects assignedAt field
   }));
