@@ -17,8 +17,8 @@ const storage = multer.diskStorage({
 // File filter
 const fileFilter = (
   req: Request,
-  file: Express.Multer.File,
-  cb: multer.FileFilterCallback
+  file: any,
+  cb: any
 ) => {
   // Accept all file types
   cb(null, true);
@@ -35,13 +35,13 @@ const upload = multer({
 
 // Handle multer errors
 export const handleMulterErrors = (
-  err: Error,
+  err: any,
   req: Request,
   res: any,
   next: NextFunction
 ) => {
-  if (err instanceof multer.MulterError) {
-    if ('code' in err && err.code === "LIMIT_FILE_SIZE") {
+  if (err) {
+    if ('code' in err && err?.code === "LIMIT_FILE_SIZE") {
       return next(new ApiError(HttpStatus.BAD_REQUEST, "File too large"));
     }
     return next(new ApiError(HttpStatus.BAD_REQUEST, err.message));

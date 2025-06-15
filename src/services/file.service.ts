@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 
 // Upload file
 export const uploadFile = async (
-  file: Express.Multer.File,
+  file: any,
   data: {
     projectId?: string;
     taskId?: string;
@@ -85,7 +85,7 @@ export const uploadFile = async (
     }
 
     // Upload file to Cloudinary
-    const uploadResult = await cloudinary.uploader.upload(file.path, {
+    const uploadResult = await cloudinary.uploader.upload(file?.path, {
       resource_type: 'auto', // Automatically detect file type
       folder: 'project-management',
     });
@@ -94,10 +94,10 @@ export const uploadFile = async (
     let versionGroup = generateUniqueId();
     let versionNumber = 1;
 
-    if (file.originalname) {
+    if (file?.originalname) {
       const existingFile = await prisma.file.findFirst({
         where: {
-          name: file.originalname,
+          name: file?.originalname,
           OR: [
             { projectId: data.projectId || null },
             { taskId: data.taskId || null },
@@ -117,10 +117,10 @@ export const uploadFile = async (
     // Save file metadata to database
     const savedFile = await prisma.file.create({
       data: {
-        name: file.originalname,
+        name: file?.originalname,
         url: uploadResult.secure_url,
-        type: file.mimetype,
-        size: file.size,
+        type: file?.mimetype,
+        size: file?.size,
         projectId: data.projectId || null,
         taskId: data.taskId || null,
         versionGroup,
@@ -130,13 +130,13 @@ export const uploadFile = async (
     });
 
     // Delete local file
-    fs.unlinkSync(file.path);
+    fs.unlinkSync(file?.path);
 
     return savedFile;
   } catch (error) {
     // Clean up local file if it exists
-    if (file.path && fs.existsSync(file.path)) {
-      fs.unlinkSync(file.path);
+    if (file?.path && fs.existsSync(file?.path)) {
+      fs.unlinkSync(file?.path);
     }
 
     throw error;
