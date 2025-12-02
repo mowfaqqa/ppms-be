@@ -22,6 +22,7 @@ import budgetRoutes from "./routes/budget.routes";
 import notificationRoutes from "./routes/notification.routes";
 import sprintRoutes from "./routes/sprint.routes";
 import backlogRoutes from "./routes/backlog.routes";
+import dashboardRoutes from "./routes/dashboard-activity.routes";
 
 // Load environment variables
 config();
@@ -67,6 +68,7 @@ app.use("/api/budgets", budgetRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api", sprintRoutes);
 app.use("/api", backlogRoutes);
+app.use("/api", dashboardRoutes);
 
 // API health check route
 app.get("/api/health", (req, res) => {
