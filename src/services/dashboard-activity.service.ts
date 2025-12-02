@@ -277,7 +277,7 @@ async function getProjectActivities(
     take: 1000,
   });
 
-  return activities.map((activity) => ({
+  return activities.map((activity: any) => ({
     id: activity.id,
     type: "PROJECT_ACTIVITY" as const,
     action: activity.type,
@@ -373,7 +373,7 @@ async function getTaskActivities(
     take: 1000,
   });
 
-  return activities.map((activity) => ({
+  return activities.map((activity: any) => ({
     id: activity.id,
     type: "TASK_ACTIVITY" as const,
     action: activity.type,
