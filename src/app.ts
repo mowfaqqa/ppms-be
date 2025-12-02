@@ -69,7 +69,7 @@ app.use("/api/budgets", budgetRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api", sprintRoutes);
 app.use("/api", backlogRoutes);
-app.use("/api/dashboard", dashboardRoutes);
+app.use("/api", dashboardRoutes);
 app.use("/api/settings", settingsRoutes);
 
 // API health check route

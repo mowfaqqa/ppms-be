@@ -1,3 +1,4 @@
+// routes/dashboard-activity.routes.ts - FIXED VERSION
 import { Router } from "express";
 import { check } from "express-validator";
 import { asyncHandler } from "../utils/common.utils";
@@ -12,27 +13,110 @@ import {
 const router = Router();
 
 /**
+ * @route   GET /api/dashboard/stats
+ * @desc    Get dashboard statistics (project counts, task counts, etc.)
+ * @access  Private - Admin and Project Managers
+ */
+router.get(
+  "/dashboard/stats",
+  authenticate,
+  authorize(["ADMIN", "PROJECT_MANAGER"]),
+  asyncHandler(async (req: any, res: any) => {
+    const { PrismaClient } = require("@prisma/client");
+    const prisma = new PrismaClient();
+
+    try {
+      // Get project counts
+      const totalProjects = await prisma.project.count();
+      const activeProjects = await prisma.project.count({
+        where: {
+          status: { in: ["PLANNING", "IN_PROGRESS"] },
+        },
+      });
+      const completedProjects = await prisma.project.count({
+        where: { status: "COMPLETED" },
+      });
+
+      // Get task counts
+      const totalTasks = await prisma.task.count();
+      const activeTasks = await prisma.task.count({
+        where: {
+          status: { in: ["TODO", "IN_PROGRESS", "REVIEW"] },
+        },
+      });
+      const completedTasks = await prisma.task.count({
+        where: { status: "COMPLETED" },
+      });
+
+      // Get user count
+      const totalUsers = await prisma.user.count({
+        where: { isActive: true },
+      });
+
+      // Get projects by status
+      const projectsByStatus = await prisma.project.groupBy({
+        by: ["status"],
+        _count: { status: true },
+      });
+
+      const projectStatusMap = {
+        PLANNING: 0,
+        IN_PROGRESS: 0,
+        ON_HOLD: 0,
+        COMPLETED: 0,
+        CANCELLED: 0,
+      };
+
+      projectsByStatus.forEach((item: any) => {
+        projectStatusMap[item.status as keyof typeof projectStatusMap] =
+          item._count.status;
+      });
+
+      // Get tasks by status
+      const tasksByStatus = await prisma.task.groupBy({
+        by: ["status"],
+        _count: { status: true },
+      });
+
+      const taskStatusMap = {
+        TODO: 0,
+        IN_PROGRESS: 0,
+        REVIEW: 0,
+        COMPLETED: 0,
+      };
+
+      tasksByStatus.forEach((item: any) => {
+        taskStatusMap[item.status as keyof typeof taskStatusMap] =
+          item._count.status;
+      });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          totalProjects,
+          activeProjects,
+          completedProjects,
+          totalTasks,
+          activeTasks,
+          completedTasks,
+          totalUsers,
+          projectsByStatus: projectStatusMap,
+          tasksByStatus: taskStatusMap,
+        },
+      });
+    } finally {
+      await prisma.$disconnect();
+    }
+  })
+);
+
+/**
  * @route   GET /api/dashboard/activities
  * @desc    Get unified activity feed for dashboard (all system activities)
  * @access  Private - Admin sees all, Project Manager sees their projects only
- *
- * @queryParams
- *   - userId: Filter by specific user (optional)
- *   - entityType: Filter by entity type - PROJECT, TASK, USER, etc. (optional)
- *   - entityId: Filter by specific entity ID (optional)
- *   - startDate: Start date for date range filter (ISO 8601 format)
- *   - endDate: End date for date range filter (ISO 8601 format)
- *   - search: Search in descriptions and names (optional)
- *   - page: Page number (default: 1)
- *   - limit: Items per page (default: 50, max: 100)
- *
- * @example
- *   GET /api/dashboard/activities?page=1&limit=50
- *   GET /api/dashboard/activities?userId=user-uuid&startDate=2025-12-01
- *   GET /api/dashboard/activities?entityType=PROJECT&search=budget
  */
 router.get(
-  "/activities",
+  "/dashboard/activities",
   authenticate,
   authorize(["ADMIN", "PROJECT_MANAGER"]),
   [
@@ -112,15 +196,9 @@ router.get(
  * @route   GET /api/dashboard/activities/stats
  * @desc    Get activity statistics for dashboard
  * @access  Private - Admin sees all, Project Manager sees their projects only
- *
- * @queryParams
- *   - timeframe: today | week | month | year (default: week)
- *
- * @example
- *   GET /api/dashboard/activities/stats?timeframe=week
  */
 router.get(
-  "/activities/stats",
+  "/dashboard/activities/stats",
   authenticate,
   authorize(["ADMIN", "PROJECT_MANAGER"]),
   [
@@ -149,12 +227,9 @@ router.get(
  * @route   GET /api/dashboard/activities/recent
  * @desc    Get recent activity summary (last 24 hours, top 10)
  * @access  Private - Admin sees all, Project Manager sees their projects only
- *
- * @example
- *   GET /api/dashboard/activities/recent
  */
 router.get(
-  "/activities/recent",
+  "/dashboard/activities/recent",
   authenticate,
   authorize(["ADMIN", "PROJECT_MANAGER"]),
   asyncHandler(async (req: any, res: any) => {
@@ -163,9 +238,14 @@ router.get(
       req.user!.role
     );
 
+    // FIX: Return activities directly (not nested in summary)
     res.status(200).json({
       success: true,
-      data: summary,
+      data: {
+        recentActivities: summary.recentActivities, // This matches frontend expectation
+        timeframe: "Last 24 hours",
+        count: summary.recentActivities.length,
+      },
     });
   })
 );
@@ -174,14 +254,9 @@ router.get(
  * @route   GET /api/dashboard/activities/export
  * @desc    Export activity feed to CSV
  * @access  Private - Admin only
- *
- * @queryParams (same as GET /activities)
- *
- * @example
- *   GET /api/dashboard/activities/export?startDate=2025-11-01
  */
 router.get(
-  "/activities/export",
+  "/dashboard/activities/export",
   authenticate,
   authorize(["ADMIN"]),
   [
@@ -274,12 +349,9 @@ router.get(
  * @route   GET /api/dashboard/activities/user/:userId
  * @desc    Get activity history for a specific user
  * @access  Private - Admin only
- *
- * @example
- *   GET /api/dashboard/activities/user/user-uuid?page=1&limit=50
  */
 router.get(
-  "/activities/user/:userId",
+  "/dashboard/activities/user/:userId",
   authenticate,
   authorize(["ADMIN"]),
   [
@@ -320,12 +392,9 @@ router.get(
  * @route   GET /api/dashboard/activities/project/:projectId
  * @desc    Get all activities for a specific project
  * @access  Private - Admin or Project Manager (if member)
- *
- * @example
- *   GET /api/dashboard/activities/project/project-uuid?page=1&limit=50
  */
 router.get(
-  "/activities/project/:projectId",
+  "/dashboard/activities/project/:projectId",
   authenticate,
   authorize(["ADMIN", "PROJECT_MANAGER"]),
   [
@@ -354,6 +423,8 @@ router.get(
           projectId,
         },
       });
+
+      await prisma.$disconnect();
 
       if (!membership) {
         return res.status(403).json({
