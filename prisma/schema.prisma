@@ -5,7 +5,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 // User model with role-based access
@@ -15,6 +14,15 @@ model User {
   name              String
   password          String // Hashed
   role              Role              @default(TEAM_MEMBER)
+  staffId           String?           @unique  // Employee/Staff ID
+  department        String?             // Department name (free text)
+  joiningDate       DateTime          @default(now())
+  isActive          Boolean           @default(true)
+  
+  // Password management
+  temporaryPassword Boolean           @default(false) // Flag for temp password
+  passwordChangedAt DateTime?
+  lastLoginAt       DateTime?
   projects          ProjectMember[]
   tasks             TaskAssignment[]
   projectComments   ProjectComment[]
@@ -29,6 +37,14 @@ model User {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   ProjectFile       ProjectFile[]
+  auditLogs         AuditLog[]
+  createdUsers      User[]            @relation("UserCreator")
+  createdBy         User?             @relation("UserCreator",   fields: [createdById], references: [id])
+  createdById          String?
+  
+  @@index([email])
+  @@index([staffId])
+  @@index([isActive])
 }
 
 enum Role {
@@ -496,4 +512,103 @@ model ProjectMethodology {
 enum Methodology {
   SCRUM
   KANBAN
+}
+
+// Audit Log for tracking all system activities
+model AuditLog {
+  id          String   @id @default(uuid())
+  
+  // Who performed the action
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // What action was performed
+  action      AuditAction
+  
+  // What entity was affected
+  entityType  EntityType
+  entityId    String
+  entityName  String?  // Human-readable name (e.g., project name, task title)
+  
+  // Details of the change
+  description String   // Human-readable description
+  changes     Json?    // Before/after values for updates
+  
+  // Request metadata
+  ipAddress   String?
+  userAgent   String?
+  
+  timestamp   DateTime @default(now())
+  
+  @@index([userId])
+  @@index([entityType])
+  @@index([entityId])
+  @@index([action])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
+
+// Enum for audit actions
+enum AuditAction {
+  CREATED
+  UPDATED
+  DELETED
+  ASSIGNED
+  UNASSIGNED
+  STATUS_CHANGED
+  PERMISSION_CHANGED
+  LOGIN
+  LOGOUT
+  PASSWORD_CHANGED
+  UPLOADED
+  DOWNLOADED
+  STARTED
+  COMPLETED
+  CANCELLED
+}
+
+// Enum for entity types being audited
+enum EntityType {
+  USER
+  PROJECT
+  TASK
+  FILE
+  SPRINT
+  BACKLOG_ITEM
+  BUDGET
+  EXPENSE
+  SETTING
+  PERMISSION
+  PROJECT_MEMBER
+  TASK_ASSIGNMENT
+}
+
+// Password Reset Tokens (for future use)
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  @@index([token])
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// User Sessions (for tracking active sessions)
+model UserSession {
+  id           String   @id @default(uuid())
+  userId       String
+  token        String   @unique
+  ipAddress    String?
+  userAgent    String?
+  lastActivity DateTime @default(now())
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  
+  @@index([userId])
+  @@index([token])
+  @@map("user_sessions")
 }

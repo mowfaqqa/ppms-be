@@ -787,3 +787,11 @@
 {"level":"info","message":"Server is running on port 5000","timestamp":"2025-06-15T12:48:20.106Z"}
 {"level":"info","message":"Shutting down gracefully...","timestamp":"2025-06-15T12:48:33.045Z"}
 {"level":"info","message":"Disconnected from database","timestamp":"2025-06-15T12:48:33.063Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-11-29T14:04:00.905Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-11-29T14:04:03.922Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-11-29T14:04:34.595Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-11-29T14:04:36.947Z"}
+{"level":"info","message":"Server is running on port 4400","timestamp":"2025-11-29T14:04:37.290Z"}
+{"level":"error","message":"ApiError: Not found - /api/v1/auth/register","method":"POST","path":"/api/v1/auth/register","stack":"ApiError: Not found - /api/v1/auth/register\n    at notFound (/Users/muwaf/Desktop/ppms-be/src/middleware/error.middleware.ts:57:17)\n    at Layer.handleRequest (/Users/muwaf/Desktop/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at trimPrefix (/Users/muwaf/Desktop/ppms-be/node_modules/router/index.js:342:13)\n    at /Users/muwaf/Desktop/ppms-be/node_modules/router/index.js:297:9\n    at processParams (/Users/muwaf/Desktop/ppms-be/node_modules/router/index.js:582:12)\n    at next (/Users/muwaf/Desktop/ppms-be/node_modules/router/index.js:291:5)\n    at /Users/muwaf/Desktop/ppms-be/node_modules/router/index.js:688:15\n    at next (/Users/muwaf/Desktop/ppms-be/node_modules/router/index.js:276:14)\n    at Function.handle (/Users/muwaf/Desktop/ppms-be/node_modules/router/index.js:186:3)\n    at router (/Users/muwaf/Desktop/ppms-be/node_modules/router/index.js:60:12)","timestamp":"2025-11-29T14:07:34.795Z"}
+{"level":"info","message":"Shutting down gracefully...","timestamp":"2025-11-29T14:11:57.086Z"}
+{"level":"info","message":"Disconnected from database","timestamp":"2025-11-29T14:11:57.148Z"}

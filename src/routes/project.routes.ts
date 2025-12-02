@@ -24,6 +24,8 @@ import {
   checkProjectPermission,
   checkAssignmentLimit,
 } from "../middleware/permission.middleware";
+import { auditLog } from "../middleware/audit.middleware";
+import { AuditAction, EntityType } from "@prisma/client";
 
 const router = Router();
 
@@ -46,6 +48,10 @@ router.post(
     check("endDate", "End date is required").notEmpty().isISO8601().toDate(),
     validate,
   ],
+  auditLog({
+    action: AuditAction.CREATED,
+    entityType: EntityType.PROJECT,
+  }),
   asyncHandler(async (req: any, res: any) => {
     const { name, description, startDate, endDate, status, pillarId } =
       req.body;
@@ -122,6 +128,10 @@ router.get(
 router.put(
   "/:id",
   authenticate,
+  auditLog({
+    action: AuditAction.UPDATED,
+    entityType: EntityType.PROJECT,
+  }),
   checkProjectPermission("project.edit"),
   [
     check("name", "Name must not be empty").optional().notEmpty(),
@@ -162,6 +172,10 @@ router.delete(
   "/:id",
   authenticate,
   checkProjectPermission("project.delete"),
+  auditLog({
+    action: AuditAction.DELETED,
+    entityType: EntityType.PROJECT,
+  }),
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
@@ -203,6 +217,10 @@ router.post(
   "/:projectId/members",
   authenticate,
   checkProjectPermission("project.edit"),
+  auditLog({
+    action: AuditAction.ASSIGNED,
+    entityType: EntityType.PROJECT,
+  }),
   checkAssignmentLimit,
   [
     check("userId", "User ID is required").notEmpty(),
@@ -239,6 +257,10 @@ router.put(
     check("permissionIds", "Permission IDs must be an array").isArray(),
     validate,
   ],
+  auditLog({
+    action: AuditAction.UPDATED,
+    entityType: EntityType.PROJECT,
+  }),
   asyncHandler(async (req: any, res: any) => {
     const { projectId, userId } = req.params;
     const { permissionIds } = req.body;
@@ -265,6 +287,10 @@ router.delete(
   "/:projectId/members/:userId",
   authenticate,
   checkProjectPermission("project.edit"),
+  auditLog({
+    action: AuditAction.DELETED,
+    entityType: EntityType.PROJECT,
+  }),
   asyncHandler(async (req: any, res: any) => {
     const { projectId, userId } = req.params;
 
@@ -308,6 +334,10 @@ router.post(
   authenticate,
   checkProjectPermission("project.view"),
   [check("content", "Content is required").notEmpty(), validate],
+    auditLog({
+    action: AuditAction.CREATED,
+    entityType: EntityType.PROJECT,
+  }),
   asyncHandler(async (req: any, res: any) => {
     const { projectId } = req.params;
     const { content } = req.body;

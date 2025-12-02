@@ -10,7 +10,7 @@ import { createDeadlineNotifications } from './services/notification.service';
 const prisma = new PrismaClient();
 
 // Get port from environment and store in Express
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 4400;
 app.set('port', port);
 
 // Create HTTP server

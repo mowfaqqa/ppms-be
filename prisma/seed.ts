@@ -43,6 +43,7 @@ async function main() {
       name: "Admin User",
       password: adminPassword,
       role: "ADMIN",
+      staffId: "ADMIN001",
     },
   });
 
