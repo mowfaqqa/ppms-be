@@ -26,6 +26,7 @@ import {
 } from "../middleware/permission.middleware";
 import { auditLog } from "../middleware/audit.middleware";
 import { AuditAction, EntityType } from "@prisma/client";
+import { getRelatedProjectsController } from "../controllers/project_relationship.controller";
 
 const router = Router();
 
@@ -443,5 +444,16 @@ router.get(
       data: activities,
     });
   })
+);
+
+/**
+ * GET /api/projects/:projectId/related
+ * Get all related projects for a specific project
+ */
+router.get(
+  "/:projectId/related",
+  authenticate,
+  checkProjectPermission("project.view"),
+  getRelatedProjectsController
 );
 export default router;

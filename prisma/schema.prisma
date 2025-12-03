@@ -100,6 +100,8 @@ model Project {
   sprints      Sprint[]
   backlogItems BacklogItem[]
   methodology  ProjectMethodology?
+  relatedFrom         ProjectRelationship[] @relation("RelatedFrom")
+  relatedTo           ProjectRelationship[] @relation("RelatedTo")
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
 }
@@ -111,7 +113,20 @@ enum ProjectStatus {
   COMPLETED
   CANCELLED
 }
+model ProjectRelationship {
+  id              String   @id @default(cuid())
+  fromProjectId   String
+  fromProject     Project  @relation("RelatedFrom", fields: [fromProjectId], references: [id], onDelete: Cascade)
+  toProjectId     String
+  toProject       Project  @relation("RelatedTo", fields: [toProjectId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
+  @@unique([fromProjectId, toProjectId])
+  @@index([fromProjectId])
+  @@index([toProjectId])
+  @@map("project_relationships")
+}
 // Project members with permissions
 model ProjectMember {
   id          String            @id @default(cuid())

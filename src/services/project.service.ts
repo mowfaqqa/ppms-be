@@ -12,9 +12,10 @@ export const createProject = async (
     endDate: Date;
     status?: ProjectStatus;
     pillarId: string;
+    relatedProjectIds?: string[]; // New optional field
   },
   userId: string
-): Promise<Project> => {
+): Promise<any> => {
   // Check if pillar exists
   const pillar = await prisma.pillar.findUnique({
     where: { id: data.pillarId },
@@ -32,7 +33,25 @@ export const createProject = async (
     );
   }
 
-  // Create project with creator as project member with all permissions
+  // Validate related projects if provided
+  if (data.relatedProjectIds && data.relatedProjectIds.length > 0) {
+    const relatedProjects = await prisma.project.findMany({
+      where: {
+        id: {
+          in: data.relatedProjectIds,
+        },
+      },
+    });
+
+    if (relatedProjects.length !== data.relatedProjectIds.length) {
+      throw new ApiError(
+        HttpStatus.BAD_REQUEST,
+        "One or more related projects not found"
+      );
+    }
+  }
+
+  // Create project with creator as project member and related projects
   const project = await prisma.$transaction(async (tx) => {
     // Create project
     const newProject = await tx.project.create({
@@ -66,10 +85,26 @@ export const createProject = async (
       },
     });
 
+    // Create project relationships if provided
+    if (data.relatedProjectIds && data.relatedProjectIds.length > 0) {
+      for (const relatedId of data.relatedProjectIds) {
+        // Create relationship (store in one direction: smaller ID -> larger ID)
+        const [fromId, toId] = [newProject.id, relatedId].sort();
+        await tx.projectRelationship.create({
+          data: {
+            fromProjectId: fromId,
+            toProjectId: toId,
+          },
+        });
+      }
+    }
+
     return newProject;
   });
 
-  return project;
+  // Fetch the complete project with relationships
+  const completeProject = await getProjectById(project.id);
+  return completeProject;
 };
 
 // Get all projects (with optional filters)
@@ -199,7 +234,13 @@ export const getProjectById = async (id: string): Promise<any> => {
     throw new ApiError(HttpStatus.NOT_FOUND, "Project not found");
   }
 
-  return project;
+  // Get related projects
+  const relatedProjects = await getRelatedProjects(id);
+
+  return {
+    ...project,
+    relatedProjects,
+  };
 };
 
 // Update project
@@ -877,5 +918,222 @@ export const removeProjectMember = async (
         },
       },
     });
+  });
+};
+
+// ==================== PROJECT RELATIONSHIP METHODS ====================
+
+/**
+ * Add related projects to a project (bidirectional)
+ * @param projectId - The project to add relationships to
+ * @param relatedProjectIds - Array of project IDs to relate
+ * @param userId - User performing the action
+ */
+export const addRelatedProjects = async (
+  projectId: string,
+  relatedProjectIds: string[],
+  userId: string
+): Promise<any[]> => {
+  // Validate that the main project exists
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+  });
+
+  if (!project) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Project not found");
+  }
+
+  // Validate that all related projects exist
+  const relatedProjects = await prisma.project.findMany({
+    where: {
+      id: {
+        in: relatedProjectIds,
+      },
+    },
+  });
+
+  if (relatedProjects.length !== relatedProjectIds.length) {
+    throw new ApiError(
+      HttpStatus.BAD_REQUEST,
+      "One or more related projects not found"
+    );
+  }
+
+  // Prevent self-reference
+  if (relatedProjectIds.includes(projectId)) {
+    throw new ApiError(
+      HttpStatus.BAD_REQUEST,
+      "A project cannot be related to itself"
+    );
+  }
+
+  // Create relationships in transaction
+  const relationships = await prisma.$transaction(async (tx) => {
+    const createdRelationships = [];
+
+    for (const relatedId of relatedProjectIds) {
+      // Check if relationship already exists (in either direction)
+      const existingRelationship = await tx.projectRelationship.findFirst({
+        where: {
+          OR: [
+            { fromProjectId: projectId, toProjectId: relatedId },
+            { fromProjectId: relatedId, toProjectId: projectId },
+          ],
+        },
+      });
+
+      // Skip if relationship already exists
+      if (existingRelationship) {
+        continue;
+      }
+
+      // Create relationship (store in one direction: smaller ID -> larger ID for consistency)
+      const [fromId, toId] = [projectId, relatedId].sort();
+      const relationship = await tx.projectRelationship.create({
+        data: {
+          fromProjectId: fromId,
+          toProjectId: toId,
+        },
+        include: {
+          fromProject: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          toProject: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      createdRelationships.push(relationship);
+
+      // Create activity log
+      const relatedProject = relatedProjects.find((p) => p.id === relatedId);
+      await tx.projectActivity.create({
+        data: {
+          type: "PROJECT_UPDATED",
+          description: `linked project to ${relatedProject?.name}`,
+          projectId,
+          userId,
+          metadata: {
+            relatedProjectId: relatedId,
+            relatedProjectName: relatedProject?.name,
+          },
+        },
+      });
+    }
+
+    return createdRelationships;
+  });
+
+  return relationships;
+};
+
+/**
+ * Remove a project relationship (bidirectional)
+ * @param projectId - One of the related projects
+ * @param relatedProjectId - The other related project
+ * @param userId - User performing the action
+ */
+export const removeRelatedProject = async (
+  projectId: string,
+  relatedProjectId: string,
+  userId: string
+): Promise<void> => {
+  // Find relationship (could be in either direction)
+  const relationship = await prisma.projectRelationship.findFirst({
+    where: {
+      OR: [
+        { fromProjectId: projectId, toProjectId: relatedProjectId },
+        { fromProjectId: relatedProjectId, toProjectId: projectId },
+      ],
+    },
+    include: {
+      fromProject: { select: { id: true, name: true } },
+      toProject: { select: { id: true, name: true } },
+    },
+  });
+
+  if (!relationship) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Project relationship not found");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // Delete relationship
+    await tx.projectRelationship.delete({
+      where: { id: relationship.id },
+    });
+
+    // Create activity log
+    const otherProject =
+      relationship.fromProjectId === projectId
+        ? relationship.toProject
+        : relationship.fromProject;
+
+    await tx.projectActivity.create({
+      data: {
+        type: "PROJECT_UPDATED",
+        description: `unlinked project from ${otherProject.name}`,
+        projectId,
+        userId,
+        metadata: {
+          relatedProjectId: otherProject.id,
+          relatedProjectName: otherProject.name,
+        },
+      },
+    });
+  });
+};
+
+/**
+ * Get all related projects for a specific project
+ * @param projectId - The project ID
+ */
+export const getRelatedProjects = async (projectId: string): Promise<any[]> => {
+  // Get relationships where this project is involved (in either direction)
+  const relationships = await prisma.projectRelationship.findMany({
+    where: {
+      OR: [{ fromProjectId: projectId }, { toProjectId: projectId }],
+    },
+    include: {
+      fromProject: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          startDate: true,
+          endDate: true,
+        },
+      },
+      toProject: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          startDate: true,
+          endDate: true,
+        },
+      },
+    },
+  });
+
+  // Map to return the "other" project in each relationship
+  return relationships.map((rel) => {
+    const relatedProject =
+      rel.fromProjectId === projectId ? rel.toProject : rel.fromProject;
+    return {
+      id: relatedProject.id,
+      name: relatedProject.name,
+      status: relatedProject.status,
+      startDate: relatedProject.startDate,
+      endDate: relatedProject.endDate,
+      relationshipId: rel.id,
+      createdAt: rel.createdAt,
+    };
   });
 };
