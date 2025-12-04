@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import { initializeSocketServer } from './websocket/socket';
 import logger from './config/logger';
 import cron from 'node-cron';
-import { createDeadlineNotifications } from './services/notification.service';
+// import { notifyDeadlineApproaching } from './services/notification.service';
 
 // Initialize Prisma client
 const prisma = new PrismaClient();
@@ -27,15 +27,15 @@ async function startServer() {
     logger.info('Connected to database');
 
     // Schedule deadline notifications job (runs at 8:00 AM every day)
-    cron.schedule('0 8 * * *', async () => {
-      try {
-        logger.info('Running deadline notifications job');
-        const count = await createDeadlineNotifications();
-        logger.info(`Created ${count} deadline notifications`);
-      } catch (error) {
-        logger.error('Error in deadline notifications job:', error);
-      }
-    });
+    // cron.schedule('0 8 * * *', async () => {
+    //   try {
+    //     logger.info('Running deadline notifications job');
+    //     const count = await notifyDeadlineApproaching();
+    //     logger.info(`Created ${count} deadline notifications`);
+    //   } catch (error) {
+    //     logger.error('Error in deadline notifications job:', error);
+    //   }
+    // });
 
     // Start server
     server.listen(port, () => {

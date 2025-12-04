@@ -1,5 +1,6 @@
 import { PrismaClient, Project, ProjectStatus } from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
+import { notifyProjectAssignment, notifyMention } from "./notification.service";
 
 const prisma = new PrismaClient();
 
@@ -221,12 +222,6 @@ export const getProjectById = async (id: string): Promise<any> => {
           },
         },
       },
-      budget: {
-        include: {
-          allocations: true,
-          expenses: true,
-        },
-      },
     },
   });
 
@@ -332,7 +327,8 @@ export const deleteProject = async (id: string): Promise<void> => {
 export const addProjectMember = async (
   projectId: string,
   userId: string,
-  permissionIds: string[]
+  permissionIds: string[],
+  currentUserId?: string
 ): Promise<any> => {
   // Check if project exists
   const project = await prisma.project.findUnique({
@@ -351,7 +347,19 @@ export const addProjectMember = async (
   if (!user) {
     throw new ApiError(HttpStatus.NOT_FOUND, "User not found");
   }
+  // Check if user is already assigned to 3 or more projects
+  const userProjectCount = await prisma.projectMember.count({
+    where: {
+      userId: userId,
+    },
+  });
 
+  if (userProjectCount >= 3) {
+    throw new ApiError(
+      HttpStatus.BAD_REQUEST,
+      "User cannot be added to more than 3 projects"
+    );
+  }
   // Check if user is already a member
   const existingMember = await prisma.projectMember.findUnique({
     where: {
@@ -384,7 +392,7 @@ export const addProjectMember = async (
     }
   }
 
-  return prisma.projectMember.create({
+  const result = await prisma.projectMember.create({
     data: {
       userId,
       projectId,
@@ -404,6 +412,24 @@ export const addProjectMember = async (
       permissions: true,
     },
   });
+  try {
+    const actorId = currentUserId || userId; // Use currentUserId if provided, fallback to userId
+    const currentUser = await prisma.user.findUnique({
+      where: { id: actorId },
+    });
+
+    await notifyProjectAssignment(
+      userId,
+      projectId,
+      project.name,
+      actorId,
+      currentUser?.name || "System"
+    );
+  } catch (error) {
+    console.error("Failed to create project assignment notification:", error);
+  }
+
+  return result;
 };
 
 // Update project member permissions
@@ -510,30 +536,6 @@ export const getProjectStats = async (id: string) => {
     where: { projectId: id },
   });
 
-  // Get budget summary if exists
-  let budget = null;
-  const projectBudget = await prisma.budget.findUnique({
-    where: { projectId: id },
-    include: {
-      allocations: true,
-      expenses: true,
-    },
-  });
-
-  if (projectBudget) {
-    const totalExpenses = projectBudget.expenses.reduce(
-      (sum, expense) => sum + expense.amount,
-      0
-    );
-
-    budget = {
-      totalAmount: projectBudget.totalAmount,
-      totalExpenses,
-      remainingAmount: projectBudget.totalAmount - totalExpenses,
-      percentUsed: (totalExpenses / projectBudget.totalAmount) * 100,
-    };
-  }
-
   // Project timeline info
   const now = new Date();
   const startDate = new Date(project.startDate);
@@ -555,7 +557,6 @@ export const getProjectStats = async (id: string) => {
       byPriority: tasksByPriority,
     },
     memberCount,
-    budget,
     timeline: {
       percentComplete,
       daysRemaining,
@@ -615,7 +616,52 @@ export const createProjectComment = async (
 
     return comment;
   });
+  // Extract mentions from comment content (e.g., @username)
+  const mentionPattern = /@(\w+)/g;
+  const mentions = content.match(mentionPattern);
 
+  if (mentions && mentions.length > 0) {
+    try {
+      // Get project members to find mentioned users
+      const projectMembers = await prisma.projectMember.findMany({
+        where: { projectId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      const currentUser = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      // Notify each mentioned user
+      for (const mention of mentions) {
+        const username = mention.substring(1); // Remove @
+        const mentionedMember = projectMembers.find(
+          (m) => m.user.name.toLowerCase() === username.toLowerCase()
+        );
+
+        if (mentionedMember && mentionedMember.userId !== userId) {
+          await notifyMention(
+            mentionedMember.userId,
+            "PROJECT",
+            projectId,
+            project.name,
+            content.substring(0, 100),
+            userId,
+            currentUser?.name || "Unknown"
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Failed to create mention notifications:", error);
+    }
+  }
   return {
     ...result,
     isEdited: false,

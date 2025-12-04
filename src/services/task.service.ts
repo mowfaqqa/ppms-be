@@ -1,6 +1,9 @@
 import { PrismaClient, Task, TaskStatus, Priority } from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
-import { createNotification } from "./notification.service";
+import {
+  notifyTaskAssignment,
+  notifyTaskStatusChange,
+} from "./notification.service";
 
 const prisma = new PrismaClient();
 
@@ -28,6 +31,15 @@ export const createTask = async (
 
   if (!project) {
     throw new ApiError(HttpStatus.NOT_FOUND, "Project not found");
+  }
+
+  // Get creator details
+  const creator = await prisma.user.findUnique({
+    where: { id: creatorId },
+  });
+
+  if (!creator) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Creator not found");
   }
 
   let backlogItem = null;
@@ -138,16 +150,6 @@ export const createTask = async (
             },
           });
 
-          // Create notification for each assignee
-          await createNotification(
-            userId,
-            "New Task Assignment",
-            `You have been assigned to task: ${task.title}`,
-            "TASK_ASSIGNED",
-            task.id,
-            "task"
-          );
-
           // Create task activity for assignment
           await tx.taskActivity.create({
             data: {
@@ -168,12 +170,12 @@ export const createTask = async (
     await tx.projectActivity.create({
       data: {
         type: "TASK_CREATED",
- description: backlogItem 
+        description: backlogItem
           ? `created task "${task.title}" from backlog item "${backlogItem.title}"`
           : `created task "${task.title}"`,
         projectId: data.projectId,
         userId: creatorId,
-       metadata: {
+        metadata: {
           taskId: task.id,
           taskTitle: task.title,
           priority: task.priority,
@@ -188,6 +190,29 @@ export const createTask = async (
 
     return task;
   });
+
+  // ✅ FIXED: Create notifications AFTER transaction completes
+  if (assigneeIds.length > 0) {
+    await Promise.all(
+      assigneeIds.map(async (userId) => {
+        try {
+          await notifyTaskAssignment(
+            userId,
+            result.id,
+            result.title,
+            project.name,
+            creatorId,
+            creator.name
+          );
+        } catch (error) {
+          console.error(
+            `Failed to create notification for user ${userId}:`,
+            error
+          );
+        }
+      })
+    );
+  }
 
   return result;
 };
@@ -519,7 +544,7 @@ export const linkTaskToBacklogItem = async (
   const updatedTask = await prisma.$transaction(async (tx) => {
     const updated = await tx.task.update({
       where: { id: taskId },
-      data: { 
+      data: {
         backlogItemId,
         sprintId: backlogItem.sprintId || task.sprintId, // Inherit sprint from backlog item if available
       },
@@ -603,7 +628,9 @@ export const unlinkTaskFromBacklogItem = async (
 };
 
 // Get task backlog context (enhanced task details with backlog info)
-export const getTaskWithBacklogContext = async (taskId: string): Promise<any> => {
+export const getTaskWithBacklogContext = async (
+  taskId: string
+): Promise<any> => {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
     include: {
@@ -823,7 +850,11 @@ export const bulkMoveTasksToSprint = async (
 
       movedCount++;
     } catch (error) {
-      errors.push(`Error moving task ${taskId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      errors.push(
+        `Error moving task ${taskId}: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 
@@ -843,9 +874,9 @@ export const bulkMoveTasksToBacklog = async (
     try {
       const task = await prisma.task.findUnique({
         where: { id: taskId },
-        include: { 
+        include: {
           sprint: { select: { name: true } },
-          backlogItem: true 
+          backlogItem: true,
         },
       });
 
@@ -887,7 +918,11 @@ export const bulkMoveTasksToBacklog = async (
 
       movedCount++;
     } catch (error) {
-      errors.push(`Error moving task ${taskId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      errors.push(
+        `Error moving task ${taskId}: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 
@@ -895,7 +930,9 @@ export const bulkMoveTasksToBacklog = async (
 };
 
 // Get tasks by backlog item
-export const getTasksByBacklogItem = async (backlogItemId: string): Promise<any[]> => {
+export const getTasksByBacklogItem = async (
+  backlogItemId: string
+): Promise<any[]> => {
   return prisma.task.findMany({
     where: { backlogItemId },
     include: {
@@ -923,10 +960,7 @@ export const getTasksByBacklogItem = async (backlogItemId: string): Promise<any[
         },
       },
     },
-    orderBy: [
-      { priority: "desc" },
-      { createdAt: "desc" },
-    ],
+    orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
   });
 };
 // Get all tasks (with optional filters)
@@ -1147,11 +1181,21 @@ export const updateTask = async (
           userId: true,
         },
       },
+      project: true,
     },
   });
 
   if (!task) {
     throw new ApiError(HttpStatus.NOT_FOUND, "Task not found");
+  }
+
+  // Get current user
+  const currentUser = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!currentUser) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Current user not found");
   }
 
   // If parent task is being changed, validate it
@@ -1270,27 +1314,6 @@ export const updateTask = async (
       });
     }
 
-    // Create notifications for all assignees about the update
-    const assigneeIds = task.assignments.map((a) => a.userId);
-
-    if (assigneeIds.length > 0 && activities.length > 0) {
-      await Promise.all(
-        assigneeIds.map(async (assigneeId) => {
-          // Don't notify the user who made the update
-          if (assigneeId !== userId) {
-            await createNotification(
-              assigneeId,
-              "Task Updated",
-              `Task "${task.title}" has been updated`,
-              "TASK_UPDATED",
-              task.id,
-              "task"
-            );
-          }
-        })
-      );
-    }
-
     // Create project activity log
     if (activities.length > 0) {
       await tx.projectActivity.create({
@@ -1310,6 +1333,26 @@ export const updateTask = async (
 
     return updated;
   });
+
+  // ✅ FIXED: Create notifications AFTER transaction with correct parameters
+  const assigneeIds = task.assignments.map((a) => a.userId);
+
+  // Notify about status change
+  if (data.status && data.status !== task.status && assigneeIds.length > 0) {
+    try {
+      await notifyTaskStatusChange(
+        assigneeIds.filter((id) => id !== userId), // Don't notify the user who made the change
+        id,
+        task.title,
+        task.status,
+        data.status,
+        userId,
+        currentUser.name
+      );
+    } catch (error) {
+      console.error("Failed to create status change notification:", error);
+    }
+  }
 
   return updatedTask;
 };
@@ -1371,7 +1414,8 @@ export const deleteTask = async (id: string, userId: string): Promise<void> => {
 // Assign user to task
 export const assignTaskToUser = async (
   taskId: string,
-  userId: string
+  userId: string,
+  currentUserId: string // ✅ ADDED
 ): Promise<any> => {
   // Check if task exists
   const task = await prisma.task.findUnique({
@@ -1392,6 +1436,15 @@ export const assignTaskToUser = async (
 
   if (!user) {
     throw new ApiError(HttpStatus.NOT_FOUND, "User not found");
+  }
+
+  // Get current user
+  const currentUser = await prisma.user.findUnique({
+    where: { id: currentUserId },
+  });
+
+  if (!currentUser) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Current user not found");
   }
 
   // Check if user is a member of the project
@@ -1452,18 +1505,36 @@ export const assignTaskToUser = async (
       },
     });
 
-    // Create notification
-    await createNotification(
-      userId,
-      "New Task Assignment",
-      `You have been assigned to task: ${task.title}`,
-      "TASK_ASSIGNED",
-      taskId,
-      "task"
-    );
+    // Create task activity
+    await tx.taskActivity.create({
+      data: {
+        type: "ASSIGNED",
+        description: `assigned ${user.name} to this task`,
+        taskId,
+        userId: currentUserId, // ✅ FIXED
+        metadata: {
+          assignedUserId: userId,
+          assignedUserName: user.name,
+        },
+      },
+    });
 
     return newAssignment;
   });
+
+  // ✅ FIXED: Create notification with correct parameters
+  try {
+    await notifyTaskAssignment(
+      userId,
+      taskId,
+      task.title,
+      task.project.name,
+      currentUserId,
+      currentUser.name
+    );
+  } catch (error) {
+    console.error("Failed to create assignment notification:", error);
+  }
 
   return result;
 };
@@ -1632,11 +1703,27 @@ export const createTaskComment = async (
   // Check if task exists
   const task = await prisma.task.findUnique({
     where: { id: taskId },
-    include: { project: true },
+    include: {
+      project: true,
+      assignments: {
+        select: {
+          userId: true,
+        },
+      },
+    },
   });
 
   if (!task) {
     throw new ApiError(HttpStatus.NOT_FOUND, "Task not found");
+  }
+
+  // Get current user
+  const currentUser = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!currentUser) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "User not found");
   }
 
   // Create comment and activity log in transaction
@@ -1690,6 +1777,32 @@ export const createTaskComment = async (
 
     return comment;
   });
+
+  //  Notify assignees about new comment
+  // const assigneeIds = task.assignments.map((a) => a.userId);
+  // if (assigneeIds.length > 0) {
+  //   await Promise.all(
+  //     assigneeIds
+  //       .filter((id) => id !== userId) // Don't notify the commenter
+  //       .map(async (assigneeId) => {
+  //         try {
+  //           await notifyTaskComment(
+  //             assigneeId,
+  //             taskId,
+  //             task.title,
+  //             content.substring(0, 100),
+  //             userId,
+  //             currentUser.name
+  //           );
+  //         } catch (error) {
+  //           console.error(
+  //             `Failed to create comment notification for user ${assigneeId}:`,
+  //             error
+  //           );
+  //         }
+  //       })
+  //   );
+  // }
 
   return {
     ...result,

@@ -1,6 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
-import { createNotification } from "./notification.service";
+import {
+  notifyTaskAssignment,
+  notifyTaskUnassignment,
+} from "./notification.service";
 
 const prisma = new PrismaClient();
 
@@ -28,17 +31,18 @@ export const getTaskAssignments = async (taskId: string): Promise<any[]> => {
       },
     },
     orderBy: {
-      createdAt: 'asc',
+      createdAt: "asc",
     },
   });
 };
 
-// Add task assignment (wrapper around existing assignTaskToUser)
+// Add task assignment
 export const addTaskAssignment = async (
   taskId: string,
-  userId: string
+  userId: string,
+  currentUserId: string
 ): Promise<any> => {
-  // Use existing assignTaskToUser logic but return assignment with proper structure
+  // Get task with project details
   const task = await prisma.task.findUnique({
     where: { id: taskId },
     include: {
@@ -57,6 +61,15 @@ export const addTaskAssignment = async (
 
   if (!user) {
     throw new ApiError(HttpStatus.NOT_FOUND, "User not found");
+  }
+
+  // Get current user (who is assigning)
+  const currentUser = await prisma.user.findUnique({
+    where: { id: currentUserId },
+  });
+
+  if (!currentUser) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Current user not found");
   }
 
   // Check if user is a member of the project
@@ -118,7 +131,7 @@ export const addTaskAssignment = async (
         type: "ASSIGNED",
         description: `assigned ${user.name} to this task`,
         taskId,
-        userId, // This should be the current user ID in real implementation
+        userId: currentUserId, // ✅ FIXED: Current user, not assigned user
         metadata: {
           assignedUserId: userId,
           assignedUserName: user.name,
@@ -132,7 +145,7 @@ export const addTaskAssignment = async (
         type: "TASK_UPDATED",
         description: `assigned ${user.name} to task "${task.title}"`,
         projectId: task.projectId,
-        userId, // This should be the current user ID
+        userId: currentUserId, // ✅ FIXED: Current user
         metadata: {
           taskId: task.id,
           taskTitle: task.title,
@@ -142,21 +155,26 @@ export const addTaskAssignment = async (
       },
     });
 
-    // Create notification
-    await createNotification(
-      userId,
-      "New Task Assignment",
-      `You have been assigned to task: ${task.title}`,
-      "TASK_ASSIGNED",
-      taskId,
-      "task"
-    );
-
     return {
       ...assignment,
-      assignedAt: assignment.createdAt, // Frontend expects assignedAt field
+      assignedAt: assignment.createdAt,
     };
   });
+
+  // ✅ FIXED: Create notification with correct parameters
+  try {
+    await notifyTaskAssignment(
+      userId, // Who to notify (the assigned user)
+      taskId, // Task ID
+      task.title, // Task title
+      task.project.name, // Project name
+      currentUserId, // Who assigned (actor ID)
+      currentUser.name // Actor name
+    );
+  } catch (notificationError) {
+    console.error("Failed to create notification:", notificationError);
+    // Don't fail the assignment if notification fails
+  }
 
   return result;
 };
@@ -164,7 +182,8 @@ export const addTaskAssignment = async (
 // Remove task assignment
 export const removeTaskAssignment = async (
   taskId: string,
-  assignmentId: string
+  assignmentId: string,
+  currentUserId: string // ✅ ADDED: Who is removing the assignment
 ): Promise<void> => {
   // Find assignment by ID and verify it belongs to the task
   const assignment = await prisma.taskAssignment.findUnique({
@@ -187,10 +206,16 @@ export const removeTaskAssignment = async (
   });
 
   if (!assignment || assignment.taskId !== taskId) {
-    throw new ApiError(
-      HttpStatus.NOT_FOUND,
-      "Assignment not found"
-    );
+    throw new ApiError(HttpStatus.NOT_FOUND, "Assignment not found");
+  }
+
+  // Get current user
+  const currentUser = await prisma.user.findUnique({
+    where: { id: currentUserId },
+  });
+
+  if (!currentUser) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Current user not found");
   }
 
   await prisma.$transaction(async (tx) => {
@@ -205,7 +230,7 @@ export const removeTaskAssignment = async (
         type: "UNASSIGNED",
         description: `removed ${assignment.user.name} from this task`,
         taskId,
-        userId: assignment.userId, // This should be the current user ID
+        userId: currentUserId, // ✅ FIXED: Current user
         metadata: {
           removedUserId: assignment.userId,
           removedUserName: assignment.user.name,
@@ -219,7 +244,7 @@ export const removeTaskAssignment = async (
         type: "TASK_UPDATED",
         description: `unassigned ${assignment.user.name} from task "${assignment.task.title}"`,
         projectId: assignment.task.projectId,
-        userId: assignment.userId, // This should be the current user ID
+        userId: currentUserId, // ✅ FIXED: Current user
         metadata: {
           taskId: assignment.task.id,
           taskTitle: assignment.task.title,
@@ -229,10 +254,25 @@ export const removeTaskAssignment = async (
       },
     });
   });
+
+  // ✅ ADDED: Create unassignment notification (optional)
+  try {
+    await notifyTaskUnassignment(
+      assignment.userId, // Who to notify
+      taskId, // Task ID
+      assignment.task.title, // Task title
+      currentUserId, // Who unassigned
+      currentUser.name // Actor name
+    );
+  } catch (notificationError) {
+    console.error("Failed to create notification:", notificationError);
+  }
 };
 
 // Get project workloads for assignment planning
-export const getProjectWorkloads = async (projectId: string): Promise<any[]> => {
+export const getProjectWorkloads = async (
+  projectId: string
+): Promise<any[]> => {
   // Check if project exists
   const project = await prisma.project.findUnique({
     where: { id: projectId },
@@ -265,7 +305,7 @@ export const getProjectWorkloads = async (projectId: string): Promise<any[]> => 
           task: {
             projectId,
             status: {
-              in: ['TODO', 'IN_PROGRESS', 'REVIEW'],
+              in: ["TODO", "IN_PROGRESS", "REVIEW"],
             },
           },
         },
@@ -296,7 +336,9 @@ export const getProjectWorkloads = async (projectId: string): Promise<any[]> => 
         },
       });
 
-      const totalHours = Math.round((totalMinutesThisWeek._sum.duration || 0) / 60);
+      const totalHours = Math.round(
+        (totalMinutesThisWeek._sum.duration || 0) / 60
+      );
 
       return {
         userId: member.userId,

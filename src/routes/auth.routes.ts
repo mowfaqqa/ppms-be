@@ -101,7 +101,6 @@ function getPermissionsForRole(role: string): string[] {
         "view_reports",
         "manage_portfolios",
         "manage_projects",
-        "manage_budget",
         "view_audit_trail",
       ];
     case "PROJECT_MANAGER":
@@ -112,7 +111,6 @@ function getPermissionsForRole(role: string): string[] {
         "view_reports",
         "manage_projects",
         "manage_team",
-        "view_budget",
       ];
     case "TEAM_MEMBER":
       return ["read", "update"];

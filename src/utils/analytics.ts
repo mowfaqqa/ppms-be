@@ -30,71 +30,6 @@ const calculateOverallProgress = (stats: any): number => {
 };
 
 /**
- * Calculate budget health based on spending vs allocation
- */
-const calculateBudgetHealth = async (portfolioId: string): Promise<number> => {
-  try {
-    // Get portfolio budget information
-    const portfolio = await prisma.portfolio.findUnique({
-      where: { id: portfolioId },
-      include: {
-        pillars: {
-          include: {
-            projects: {
-              include: {
-                budget: {
-                  include: {
-                    expenses: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!portfolio) return 100;
-
-    // Calculate total allocated budget across all projects
-    let totalAllocated = 0;
-    let totalSpent = 0;
-
-    portfolio.pillars.forEach((pillar) => {
-      pillar.projects.forEach((project) => {
-        if (project.budget) {
-          totalAllocated += project.budget.totalAmount;
-          totalSpent += project.budget.expenses.reduce(
-            (sum, expense) => sum + expense.amount,
-            0
-          );
-        }
-      });
-    });
-
-    if (totalAllocated === 0) return 100;
-
-    const spendingRatio = totalSpent / totalAllocated;
-
-    // Budget health scoring:
-    // 0-70% spent = 100% health (good)
-    // 70-90% spent = declining health
-    // 90-100% spent = 50% health (warning)
-    // >100% spent = 0% health (critical)
-
-    if (spendingRatio <= 0.7) return 100;
-    if (spendingRatio <= 0.9)
-      return Math.round(100 - (spendingRatio - 0.7) * 250); // Linear decline
-    if (spendingRatio <= 1.0)
-      return Math.round(50 - (spendingRatio - 0.9) * 500); // Steeper decline
-    return 0; // Over budget
-  } catch (error) {
-    console.error("Error calculating budget health:", error);
-    return 100; // Default to healthy if calculation fails
-  }
-};
-
-/**
  * Calculate timeline health based on project schedules
  */
 const calculateTimelineHealth = async (
@@ -176,7 +111,6 @@ const getPortfolioAnalytics = async (portfolioId: string) => {
 
     // Calculate health metrics
     const overallProgress = calculateOverallProgress(stats);
-    const budgetHealth = await calculateBudgetHealth(portfolioId);
     const timelineHealth = await calculateTimelineHealth(portfolioId);
 
     // Get additional metrics
@@ -187,12 +121,6 @@ const getPortfolioAnalytics = async (portfolioId: string) => {
           include: {
             projects: {
               include: {
-                budget: {
-                  include: {
-                    expenses: true,
-                    allocations: true,
-                  },
-                },
                 members: {
                   include: {
                     user: true,
@@ -209,53 +137,17 @@ const getPortfolioAnalytics = async (portfolioId: string) => {
       throw new ApiError(HttpStatus.NOT_FOUND, "Portfolio not found");
     }
 
-    // Calculate budget metrics
-    let totalBudgetAllocated = 0;
-    let totalBudgetUtilized = 0;
+    // Calculate team members
     let totalTeamMembers = new Set();
-    const budgetBreakdown: any[] = [];
 
     portfolio.pillars.forEach((pillar) => {
-      let pillarAllocated = 0;
-      let pillarUtilized = 0;
-
       pillar.projects.forEach((project) => {
         // Count unique team members
         project.members.forEach((member) => {
           totalTeamMembers.add(member.user.id);
         });
-
-        if (project.budget) {
-          const allocated = project.budget.totalAmount;
-          const utilized = project.budget.expenses.reduce(
-            (sum, expense) => sum + expense.amount,
-            0
-          );
-
-          totalBudgetAllocated += allocated;
-          totalBudgetUtilized += utilized;
-          pillarAllocated += allocated;
-          pillarUtilized += utilized;
-        }
       });
-
-      if (pillarAllocated > 0) {
-        budgetBreakdown.push({
-          pillarName: pillar.name,
-          allocated: pillarAllocated,
-          utilized: pillarUtilized,
-          utilizationRate: (pillarUtilized / pillarAllocated) * 100,
-        });
-      }
     });
-
-    // Calculate additional metrics
-    const budgetVariance =
-      totalBudgetAllocated > 0
-        ? ((totalBudgetUtilized - totalBudgetAllocated) /
-            totalBudgetAllocated) *
-          100
-        : 0;
 
     const onTimeProjects = portfolio.pillars.reduce((count, pillar) => {
       return (
@@ -277,31 +169,23 @@ const getPortfolioAnalytics = async (portfolioId: string) => {
 
     // Determine risk level
     let riskLevel = "LOW";
-    if (budgetHealth < 50 || timelineHealth < 50 || overallProgress < 30) {
+    if (timelineHealth < 50 || overallProgress < 30) {
       riskLevel = "HIGH";
     } else if (
-      budgetHealth < 70 ||
       timelineHealth < 70 ||
       overallProgress < 50
     ) {
       riskLevel = "MEDIUM";
     }
 
-    // Count active issues (projects that are overdue or over budget)
+    // Count active issues (projects that are overdue)
     let activeIssues = 0;
     const now = new Date();
     portfolio.pillars.forEach((pillar) => {
       pillar.projects.forEach((project) => {
         const isOverdue =
           now > new Date(project.endDate) && project.status !== "COMPLETED";
-        const isOverBudget =
-          project.budget &&
-          project.budget.expenses.reduce(
-            (sum, expense) => sum + expense.amount,
-            0
-          ) > project.budget.totalAmount;
-
-        if (isOverdue || isOverBudget) {
+        if (isOverdue) {
           activeIssues++;
         }
       });
@@ -309,15 +193,10 @@ const getPortfolioAnalytics = async (portfolioId: string) => {
 
     return {
       overallProgress,
-      budgetHealth,
       timelineHealth,
-      budgetUtilized: totalBudgetUtilized,
-      budgetAllocated: totalBudgetAllocated,
       activeProjects: stats.projects?.IN_PROGRESS || 0,
       completedProjects: stats.projects?.COMPLETED || 0,
       totalTeamMembers: totalTeamMembers.size,
-      budgetBreakdown,
-      budgetVariance: Math.round(budgetVariance * 100) / 100,
       onTimeProjects,
       onTimeProjectsPercentage:
         Math.round(onTimeProjectsPercentage * 100) / 100,
@@ -333,7 +212,6 @@ const getPortfolioAnalytics = async (portfolioId: string) => {
 // Export the functions if you're putting them in a separate file
 export {
   calculateOverallProgress,
-  calculateBudgetHealth,
   calculateTimelineHealth,
   getPortfolioAnalytics,
 };

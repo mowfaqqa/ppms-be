@@ -235,7 +235,8 @@ router.post(
     const projectMember = await addProjectMember(
       projectId,
       userId,
-      permissionIds
+      permissionIds,
+      req.user!.userId
     );
 
     res.status(201).json({
@@ -335,7 +336,7 @@ router.post(
   authenticate,
   checkProjectPermission("project.view"),
   [check("content", "Content is required").notEmpty(), validate],
-    auditLog({
+  auditLog({
     action: AuditAction.CREATED,
     entityType: EntityType.PROJECT,
   }),

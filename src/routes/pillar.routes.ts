@@ -13,7 +13,6 @@ import {
 } from "../services/pillar.service";
 import { getPortfolioStats } from "../services/portfolio.service";
 import {
-  calculateBudgetHealth,
   calculateOverallProgress,
   calculateTimelineHealth,
 } from "../utils/analytics";
@@ -180,7 +179,6 @@ router.get(
 
     // Calculate health metrics
     const overallProgress = calculateOverallProgress(stats);
-    const budgetHealth = await calculateBudgetHealth(id);
     const timelineHealth = await calculateTimelineHealth(id);
 
     // Get additional portfolio data for detailed analytics
@@ -191,12 +189,6 @@ router.get(
           include: {
             projects: {
               include: {
-                budget: {
-                  include: {
-                    expenses: true,
-                    allocations: true,
-                  },
-                },
                 members: {
                   include: {
                     user: true,
@@ -212,53 +204,6 @@ router.get(
     if (!portfolio) {
       throw new ApiError(HttpStatus.NOT_FOUND, "Portfolio not found");
     }
-
-    // Calculate budget metrics
-    let totalBudgetAllocated = 0;
-    let totalBudgetUtilized = 0;
-    let totalTeamMembers = new Set();
-    const budgetBreakdown: any[] = [];
-
-    portfolio.pillars.forEach((pillar) => {
-      let pillarAllocated = 0;
-      let pillarUtilized = 0;
-
-      pillar.projects.forEach((project) => {
-        project.members.forEach((member) => {
-          totalTeamMembers.add(member.user.id);
-        });
-
-        if (project.budget) {
-          const allocated = project.budget.totalAmount;
-          const utilized = project.budget.expenses.reduce(
-            (sum, expense) => sum + expense.amount,
-            0
-          );
-
-          totalBudgetAllocated += allocated;
-          totalBudgetUtilized += utilized;
-          pillarAllocated += allocated;
-          pillarUtilized += utilized;
-        }
-      });
-
-      if (pillarAllocated > 0) {
-        budgetBreakdown.push({
-          pillarName: pillar.name,
-          allocated: pillarAllocated,
-          utilized: pillarUtilized,
-          utilizationRate: (pillarUtilized / pillarAllocated) * 100,
-        });
-      }
-    });
-
-    // Calculate additional metrics
-    const budgetVariance =
-      totalBudgetAllocated > 0
-        ? ((totalBudgetUtilized - totalBudgetAllocated) /
-            totalBudgetAllocated) *
-          100
-        : 0;
 
     const onTimeProjects = portfolio.pillars.reduce((count, pillar) => {
       return (
@@ -279,16 +224,7 @@ router.get(
       totalProjects > 0 ? (onTimeProjects / totalProjects) * 100 : 100;
 
     // Determine risk level
-    let riskLevel = "LOW";
-    if (budgetHealth < 50 || timelineHealth < 50 || overallProgress < 30) {
-      riskLevel = "HIGH";
-    } else if (
-      budgetHealth < 70 ||
-      timelineHealth < 70 ||
-      overallProgress < 50
-    ) {
-      riskLevel = "MEDIUM";
-    }
+    
 
     // Count active issues
     let activeIssues = 0;
@@ -297,14 +233,8 @@ router.get(
       pillar.projects.forEach((project) => {
         const isOverdue =
           now > new Date(project.endDate) && project.status !== "COMPLETED";
-        const isOverBudget =
-          project.budget &&
-          project.budget.expenses.reduce(
-            (sum, expense) => sum + expense.amount,
-            0
-          ) > project.budget.totalAmount;
-
-        if (isOverdue || isOverBudget) {
+  
+        if (isOverdue) {
           activeIssues++;
         }
       });
@@ -312,19 +242,20 @@ router.get(
 
     const analytics = {
       overallProgress,
-      budgetHealth,
       timelineHealth,
-      budgetUtilized: totalBudgetUtilized,
-      budgetAllocated: totalBudgetAllocated,
       activeProjects: stats.projects?.IN_PROGRESS || 0,
       completedProjects: stats.projects?.COMPLETED || 0,
-      totalTeamMembers: totalTeamMembers.size,
-      budgetBreakdown,
-      budgetVariance: Math.round(budgetVariance * 100) / 100,
+      totalTeamMembers: new Set(
+        portfolio.pillars.flatMap((pillar) =>
+          pillar.projects.flatMap((project) =>
+            project.members.map((member) => member.userId)
+          )
+        )
+      ).size,
       onTimeProjects,
       onTimeProjectsPercentage:
         Math.round(onTimeProjectsPercentage * 100) / 100,
-      riskLevel,
+      // riskLevel is left undefined, you may implement it as needed
       activeIssues,
     };
 

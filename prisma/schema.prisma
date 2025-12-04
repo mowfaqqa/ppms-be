@@ -9,39 +9,40 @@ datasource db {
 
 // User model with role-based access
 model User {
-  id                String            @id @default(cuid())
-  email             String            @unique
-  name              String
-  password          String // Hashed
-  role              Role              @default(TEAM_MEMBER)
-  staffId           String?           @unique  // Employee/Staff ID
-  department        String?             // Department name (free text)
-  joiningDate       DateTime          @default(now())
-  isActive          Boolean           @default(true)
-  
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String
+  password    String // Hashed
+  role        Role     @default(TEAM_MEMBER)
+  staffId     String?  @unique // Employee/Staff ID
+  department  String? // Department name (free text)
+  joiningDate DateTime @default(now())
+  isActive    Boolean  @default(true)
+
   // Password management
-  temporaryPassword Boolean           @default(false) // Flag for temp password
-  passwordChangedAt DateTime?
-  lastLoginAt       DateTime?
-  projects          ProjectMember[]
-  tasks             TaskAssignment[]
-  projectComments   ProjectComment[]
-  projectActivities ProjectActivity[]
-  timeEntries       TimeEntry[]
-  acttivity         Activity[]
-  notifications     Notification[]
-  taskComments      TaskComment[]
-  taskActivities    TaskActivity[]
-  backlogItems      BacklogItem[]
-  activeTimer       ActiveTimer?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  ProjectFile       ProjectFile[]
-  auditLogs         AuditLog[]
-  createdUsers      User[]            @relation("UserCreator")
-  createdBy         User?             @relation("UserCreator",   fields: [createdById], references: [id])
-  createdById          String?
-  
+  temporaryPassword      Boolean           @default(false) // Flag for temp password
+  passwordChangedAt      DateTime?
+  lastLoginAt            DateTime?
+  projects               ProjectMember[]
+  tasks                  TaskAssignment[]
+  projectComments        ProjectComment[]
+  projectActivities      ProjectActivity[]
+  timeEntries            TimeEntry[]
+  acttivity              Activity[]
+  taskComments           TaskComment[]
+  taskActivities         TaskActivity[]
+  backlogItems           BacklogItem[]
+  activeTimer            ActiveTimer?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  ProjectFile            ProjectFile[]
+  auditLogs              AuditLog[]
+  createdUsers           User[]            @relation("UserCreator")
+  createdBy              User?             @relation("UserCreator", fields: [createdById], references: [id])
+  createdById            String?
+  notifications          Notification[]    @relation // Received notifications
+  triggeredNotifications Notification[]    @relation("NotificationActor") // Triggered notifications
+
   @@index([email])
   @@index([staffId])
   @@index([isActive])
@@ -59,7 +60,6 @@ model Portfolio {
   name        String
   year        Int
   description String?
-  budget      Float? // Total portfolio budget
   startDate   DateTime? // Portfolio start date  
   endDate     DateTime? // Portfolio end date
   status      String? // Portfolio status
@@ -82,28 +82,27 @@ model Pillar {
 
 // Projects within pillars
 model Project {
-  id           String              @id @default(cuid())
+  id           String                @id @default(cuid())
   name         String
   description  String?
   startDate    DateTime
   endDate      DateTime
-  status       ProjectStatus       @default(PLANNING)
+  status       ProjectStatus         @default(PLANNING)
   pillarId     String
-  pillar       Pillar              @relation(fields: [pillarId], references: [id], onDelete: Cascade)
+  pillar       Pillar                @relation(fields: [pillarId], references: [id], onDelete: Cascade)
   tasks        Task[]
   members      ProjectMember[]
   files        File[]
-  budget       Budget?
   comments     ProjectComment[]
   activities   ProjectActivity[]
   projectFiles ProjectFile[]
   sprints      Sprint[]
   backlogItems BacklogItem[]
   methodology  ProjectMethodology?
-  relatedFrom         ProjectRelationship[] @relation("RelatedFrom")
-  relatedTo           ProjectRelationship[] @relation("RelatedTo")
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  relatedFrom  ProjectRelationship[] @relation("RelatedFrom")
+  relatedTo    ProjectRelationship[] @relation("RelatedTo")
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
 }
 
 enum ProjectStatus {
@@ -113,20 +112,22 @@ enum ProjectStatus {
   COMPLETED
   CANCELLED
 }
+
 model ProjectRelationship {
-  id              String   @id @default(cuid())
-  fromProjectId   String
-  fromProject     Project  @relation("RelatedFrom", fields: [fromProjectId], references: [id], onDelete: Cascade)
-  toProjectId     String
-  toProject       Project  @relation("RelatedTo", fields: [toProjectId], references: [id], onDelete: Cascade)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String   @id @default(cuid())
+  fromProjectId String
+  fromProject   Project  @relation("RelatedFrom", fields: [fromProjectId], references: [id], onDelete: Cascade)
+  toProjectId   String
+  toProject     Project  @relation("RelatedTo", fields: [toProjectId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@unique([fromProjectId, toProjectId])
   @@index([fromProjectId])
   @@index([toProjectId])
   @@map("project_relationships")
 }
+
 // Project members with permissions
 model ProjectMember {
   id          String            @id @default(cuid())
@@ -310,32 +311,8 @@ model File {
   createdById   String
 }
 
-// Budget tracking
-model Budget {
-  id          String             @id @default(cuid())
-  projectId   String             @unique
-  project     Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  totalAmount Float
-  allocations BudgetAllocation[]
-  expenses    Expense[]
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-}
-
-model BudgetAllocation {
-  id        String   @id @default(cuid())
-  budgetId  String
-  budget    Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
-  category  String
-  amount    Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 model Expense {
   id          String   @id @default(cuid())
-  budgetId    String
-  budget      Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
   description String
   amount      Float
   date        DateTime
@@ -345,16 +322,50 @@ model Expense {
 
 // Notification system
 model Notification {
-  id         String           @id @default(cuid())
-  userId     String
-  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title      String
-  message    String
-  type       NotificationType
-  read       Boolean          @default(false)
-  entityId   String? // ID of related entity (task, project, etc.)
-  entityType String? // Type of related entity
-  createdAt  DateTime         @default(now())
+  id      String           @id @default(cuid())
+  userId  String
+  type    NotificationType
+  title   String
+  message String           @db.Text
+  read    Boolean          @default(false)
+  readAt  DateTime? // ✅ NEW: Track when read
+
+  // Related entities
+  entityType EntityType? // ✅ CHANGED: String → EntityType enum
+  entityId   String?
+  entityName String? // ✅ NEW: Entity display name
+
+  // Navigation
+  actionUrl String? // ✅ NEW: Where to navigate on click
+
+  // Actor tracking
+  actorId   String? // ✅ NEW: Who triggered this
+  actorName String? // ✅ NEW: Actor display name
+
+  // Priority
+  priority NotificationPriority @default(NORMAL) // ✅ NEW: Priority level
+
+  // Additional context
+  metadata Json? // ✅ NEW: Flexible metadata
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt // ✅ NEW: Track updates
+
+  // Relations
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actor User? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull) // ✅ NEW
+
+  // Performance indexes
+  @@index([userId, read, createdAt]) // ✅ NEW: For unread queries
+  @@index([userId, type, read]) // ✅ NEW: For filtered queries
+  @@index([createdAt]) // ✅ NEW: For sorting
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
 }
 
 model Activity {
@@ -370,11 +381,47 @@ model Activity {
 }
 
 enum NotificationType {
-  TASK_ASSIGNED
-  TASK_UPDATED
-  DEADLINE_APPROACHING
+  // Project notifications
   PROJECT_CREATED
   PROJECT_UPDATED
+  PROJECT_ASSIGNED
+  PROJECT_REMOVED
+  PROJECT_STATUS_CHANGED
+  PROJECT_DEADLINE_APPROACHING
+
+  // Task notifications
+  TASK_CREATED
+  TASK_ASSIGNED
+  TASK_UNASSIGNED
+  TASK_UPDATED
+  TASK_STATUS_CHANGED
+  TASK_COMPLETED
+  TASK_COMMENT
+  TASK_DEADLINE_APPROACHING
+  TASK_OVERDUE
+
+  // Sprint notifications
+  SPRINT_STARTED
+  SPRINT_COMPLETED
+  SPRINT_TASK_ADDED
+
+  // Budget notifications
+  BUDGET_ALERT
+  EXPENSE_ADDED
+  BUDGET_EXCEEDED
+
+  // File notifications
+  FILE_UPLOADED
+  FILE_SHARED
+
+  // Team notifications
+  TEAM_MEMBER_ADDED
+  TEAM_MEMBER_REMOVED
+  MENTION
+
+  // System notifications
+  SYSTEM_ANNOUNCEMENT
+  ACCOUNT_UPDATE
 }
 
 // Permissions
@@ -531,30 +578,30 @@ enum Methodology {
 
 // Audit Log for tracking all system activities
 model AuditLog {
-  id          String   @id @default(uuid())
-  
+  id String @id @default(uuid())
+
   // Who performed the action
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // What action was performed
-  action      AuditAction
-  
+  action AuditAction
+
   // What entity was affected
-  entityType  EntityType
-  entityId    String
-  entityName  String?  // Human-readable name (e.g., project name, task title)
-  
+  entityType EntityType
+  entityId   String
+  entityName String? // Human-readable name (e.g., project name, task title)
+
   // Details of the change
-  description String   // Human-readable description
-  changes     Json?    // Before/after values for updates
-  
+  description String // Human-readable description
+  changes     Json? // Before/after values for updates
+
   // Request metadata
-  ipAddress   String?
-  userAgent   String?
-  
-  timestamp   DateTime @default(now())
-  
+  ipAddress String?
+  userAgent String?
+
+  timestamp DateTime @default(now())
+
   @@index([userId])
   @@index([entityType])
   @@index([entityId])
@@ -606,7 +653,7 @@ model PasswordResetToken {
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
-  
+
   @@index([token])
   @@index([userId])
   @@map("password_reset_tokens")
@@ -622,7 +669,7 @@ model UserSession {
   lastActivity DateTime @default(now())
   expiresAt    DateTime
   createdAt    DateTime @default(now())
-  
+
   @@index([userId])
   @@index([token])
   @@map("user_sessions")

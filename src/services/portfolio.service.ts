@@ -8,7 +8,6 @@ export const createPortfolio = async (data: {
   name: string;
   year?: number;
   description?: string;
-  budget?: number;
   startDate?: Date;
   endDate?: Date;
   status?: string;
@@ -36,7 +35,6 @@ export const createPortfolio = async (data: {
       name: data.name,
       year: year,
       description: data.description,
-      budget: data.budget,
       startDate: data.startDate,
       endDate: data.endDate,
       status: data.status || "PLANNING", // Default status if not provided

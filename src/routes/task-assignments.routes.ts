@@ -1,15 +1,18 @@
-import { Router } from 'express';
-import { check } from 'express-validator';
-import { asyncHandler } from '../utils/common.utils';
-import { validate } from '../middleware/error.middleware';
-import { authenticate } from '../middleware/auth.middleware';
-import { checkTaskPermission, checkAssignmentLimit } from '../middleware/permission.middleware';
+import { Router } from "express";
+import { check } from "express-validator";
+import { asyncHandler } from "../utils/common.utils";
+import { validate } from "../middleware/error.middleware";
+import { authenticate } from "../middleware/auth.middleware";
+import {
+  checkTaskPermission,
+  checkAssignmentLimit,
+} from "../middleware/permission.middleware";
 import {
   getTaskAssignments,
   addTaskAssignment,
   removeTaskAssignment,
   getProjectWorkloads,
-} from '../services/task-assignments.service';
+} from "../services/task-assignments.service";
 
 const router = Router();
 
@@ -19,14 +22,14 @@ const router = Router();
  * @access  Private
  */
 router.get(
-  '/:taskId/assignments',
+  "/:taskId/assignments",
   authenticate,
-  checkTaskPermission('task.view'),
+  checkTaskPermission("task.view"),
   asyncHandler(async (req: any, res: any) => {
     const { taskId } = req.params;
-    
+
     const assignments = await getTaskAssignments(taskId);
-    
+
     res.status(200).json({
       success: true,
       data: assignments,
@@ -40,20 +43,21 @@ router.get(
  * @access  Private
  */
 router.post(
-  '/:taskId/assignments',
+  "/:taskId/assignments",
   authenticate,
-  checkTaskPermission('task.edit'),
+  checkTaskPermission("task.edit"),
   checkAssignmentLimit,
-  [
-    check('userId', 'User ID is required').notEmpty(),
-    validate,
-  ],
+  [check("userId", "User ID is required").notEmpty(), validate],
   asyncHandler(async (req: any, res: any) => {
     const { taskId } = req.params;
     const { userId } = req.body;
-    
-    const assignment = await addTaskAssignment(taskId, userId);
-    
+
+    const assignment = await addTaskAssignment(
+      taskId,
+      userId,
+      req.user!.userId
+    );
+
     res.status(201).json({
       success: true,
       data: assignment,
@@ -67,17 +71,17 @@ router.post(
  * @access  Private
  */
 router.delete(
-  '/:taskId/assignments/:assignmentId',
+  "/:taskId/assignments/:assignmentId",
   authenticate,
-  checkTaskPermission('task.edit'),
+  checkTaskPermission("task.edit"),
   asyncHandler(async (req: any, res: any) => {
     const { taskId, assignmentId } = req.params;
-    
-    await removeTaskAssignment(taskId, assignmentId);
-    
+
+    await removeTaskAssignment(taskId, assignmentId, req.user!.userId);
+
     res.status(200).json({
       success: true,
-      message: 'User unassigned from task successfully',
+      message: "User unassigned from task successfully",
     });
   })
 );
@@ -88,13 +92,13 @@ router.delete(
  * @access  Private
  */
 router.get(
-  '/projects/:projectId/workloads',
+  "/projects/:projectId/workloads",
   authenticate,
   asyncHandler(async (req: any, res: any) => {
     const { projectId } = req.params;
-    
+
     const workloads = await getProjectWorkloads(projectId);
-    
+
     res.status(200).json({
       success: true,
       data: workloads,

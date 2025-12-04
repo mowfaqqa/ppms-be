@@ -19,8 +19,6 @@ async function main() {
     { name: "file.upload", description: "Upload files" },
     { name: "file.download", description: "Download files" },
     { name: "file.delete", description: "Delete files" },
-    { name: "budget.view", description: "View budget details" },
-    { name: "budget.edit", description: "Edit budget details" },
     { name: "report.view", description: "View reports" },
     { name: "report.create", description: "Create reports" },
   ];

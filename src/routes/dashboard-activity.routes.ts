@@ -1,4 +1,4 @@
-// routes/dashboard-activity.routes.ts - FIXED VERSION
+// routes/dashboard-activity.routes.ts
 import { Router } from "express";
 import { check } from "express-validator";
 import { asyncHandler } from "../utils/common.utils";
@@ -130,7 +130,6 @@ router.get(
         "FILE",
         "SPRINT",
         "BACKLOG_ITEM",
-        "BUDGET",
         "EXPENSE",
         "SETTING",
         "PERMISSION",
@@ -270,7 +269,6 @@ router.get(
         "FILE",
         "SPRINT",
         "BACKLOG_ITEM",
-        "BUDGET",
         "EXPENSE",
         "SETTING",
         "PERMISSION",

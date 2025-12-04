@@ -35,7 +35,6 @@ import {
   getBacklogTasks,
 } from "../services/task.service";
 
-
 const router = Router();
 
 /**
@@ -229,7 +228,7 @@ router.post(
     const { taskId } = req.params;
     const { userId } = req.body;
 
-    const assignment = await assignTaskToUser(taskId, userId);
+    const assignment = await assignTaskToUser(taskId, userId, req.user!.userId);
 
     res.status(201).json({
       success: true,
@@ -529,10 +528,7 @@ router.post(
   "/:taskId/move-to-sprint",
   authenticate,
   checkTaskPermission("task.edit"),
-  [
-    check("sprintId", "Sprint ID is required").notEmpty(),
-    validate,
-  ],
+  [check("sprintId", "Sprint ID is required").notEmpty(), validate],
   asyncHandler(async (req: any, res: any) => {
     const { taskId } = req.params;
     const { sprintId } = req.body;
@@ -578,15 +574,16 @@ router.post(
   "/:taskId/link-backlog-item",
   authenticate,
   checkTaskPermission("task.edit"),
-  [
-    check("backlogItemId", "Backlog item ID is required").notEmpty(),
-    validate,
-  ],
+  [check("backlogItemId", "Backlog item ID is required").notEmpty(), validate],
   asyncHandler(async (req: any, res: any) => {
     const { taskId } = req.params;
     const { backlogItemId } = req.body;
 
-    const task = await linkTaskToBacklogItem(taskId, backlogItemId, req.user!.userId);
+    const task = await linkTaskToBacklogItem(
+      taskId,
+      backlogItemId,
+      req.user!.userId
+    );
 
     res.status(200).json({
       success: true,
@@ -736,7 +733,11 @@ router.post(
   asyncHandler(async (req: any, res: any) => {
     const { taskIds, sprintId } = req.body;
 
-    const result = await bulkMoveTasksToSprint(taskIds, sprintId, req.user!.userId);
+    const result = await bulkMoveTasksToSprint(
+      taskIds,
+      sprintId,
+      req.user!.userId
+    );
 
     res.status(200).json({
       success: true,

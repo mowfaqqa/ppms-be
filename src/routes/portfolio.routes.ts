@@ -28,12 +28,11 @@ router.post(
     validate,
   ],
   asyncHandler(async (req:any, res:any) => {
-    const { name, description, budget, startDate, endDate, status } = req.body;
+    const { name, description, startDate, endDate, status } = req.body;
 
     const portfolio = await createPortfolio({
       name,
       description,
-      budget,
       startDate,
       endDate,
       status
