@@ -1,4 +1,9 @@
-import { PrismaClient, Project, ProjectStatus } from "@prisma/client";
+import {
+  PrismaClient,
+  Project,
+  ProjectMemberRole,
+  ProjectStatus,
+} from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
 import { notifyProjectAssignment, notifyMention } from "./notification.service";
 
@@ -328,7 +333,8 @@ export const addProjectMember = async (
   projectId: string,
   userId: string,
   permissionIds: string[],
-  currentUserId?: string
+  currentUserId?: string,
+  role: ProjectMemberRole = ProjectMemberRole.TEAM_MEMBER
 ): Promise<any> => {
   // Check if project exists
   const project = await prisma.project.findUnique({
@@ -396,6 +402,7 @@ export const addProjectMember = async (
     data: {
       userId,
       projectId,
+      role,
       permissions: {
         connect: permissionIds.map((id) => ({ id })),
       },
@@ -436,7 +443,8 @@ export const addProjectMember = async (
 export const updateProjectMemberPermissions = async (
   projectId: string,
   userId: string,
-  permissionIds: string[]
+  permissionIds: string[],
+  role?: ProjectMemberRole
 ): Promise<any> => {
   // Check if project member exists
   const projectMember = await prisma.projectMember.findUnique({
@@ -466,16 +474,18 @@ export const updateProjectMemberPermissions = async (
       throw new ApiError(HttpStatus.BAD_REQUEST, "Invalid permission IDs");
     }
   }
+  const updateData: any = {
+    permissions: { set: permissionIds.map((id) => ({ id })) },
+  };
 
+  if (role) {
+    updateData.role = role; // 👈 ADD THIS
+  }
   return prisma.projectMember.update({
     where: {
       id: projectMember.id,
     },
-    data: {
-      permissions: {
-        set: permissionIds.map((id) => ({ id })),
-      },
-    },
+    data: updateData,
     include: {
       user: {
         select: {
@@ -853,50 +863,27 @@ const getPermissionsByRole = async (role: string): Promise<any[]> => {
 // Update project member role
 export const updateProjectMemberRole = async (
   projectId: string,
-  memberId: string,
-  role: string
+  userId: string,
+  role: ProjectMemberRole,
+  updatedById: string
 ): Promise<any> => {
   // Check if project member exists
   const projectMember = await prisma.projectMember.findUnique({
-    where: { id: memberId },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-        },
-      },
-    },
+    where: { userId_projectId: { userId, projectId } },
+    include: { user: true },
   });
 
-  if (!projectMember || projectMember.projectId !== projectId) {
+  if (!projectMember) {
     throw new ApiError(HttpStatus.NOT_FOUND, "Project member not found");
   }
 
-  // Get new permissions for the role
-  const rolePermissions = await getPermissionsByRole(role);
-  const permissionIds = rolePermissions.map((p) => p.id);
-
-  const result = await prisma.$transaction(async (tx) => {
-    // Update member role and permissions
-    const updatedMember = await tx.projectMember.update({
-      where: { id: memberId },
-      data: {
-        permissions: {
-          set: permissionIds.map((id) => ({ id })),
-        },
-      },
+  // Update role
+  return await prisma.$transaction(async (tx) => {
+    const member = await tx.projectMember.update({
+      where: { userId_projectId: { userId, projectId } },
+      data: { role },
       include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
+        user: { select: { id: true, name: true, email: true, role: true } },
         permissions: true,
       },
     });
@@ -905,11 +892,11 @@ export const updateProjectMemberRole = async (
     await tx.projectActivity.create({
       data: {
         type: "MEMBER_UPDATED",
-        description: `updated ${projectMember.user.name}'s role to ${role}`,
+        description: `changed ${projectMember.user.name}'s role from ${projectMember.role} to ${role}`,
         projectId,
-        userId: projectMember.userId, // This should be the current user ID in real implementation
+        userId: updatedById,
         metadata: {
-          updatedUserId: projectMember.userId,
+          updatedUserId: userId,
           updatedUserName: projectMember.user.name,
           oldRole: projectMember.role,
           newRole: role,
@@ -917,10 +904,8 @@ export const updateProjectMemberRole = async (
       },
     });
 
-    return updatedMember;
+    return member;
   });
-
-  return result;
 };
 
 // Update existing removeProjectMember to add activity logging

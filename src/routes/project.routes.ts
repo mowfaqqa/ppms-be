@@ -19,13 +19,14 @@ import {
   deleteProjectComment,
   getProjectActivity,
   getProjectMembers,
+  updateProjectMemberRole,
 } from "../services/project.service";
 import {
   checkProjectPermission,
   checkAssignmentLimit,
 } from "../middleware/permission.middleware";
 import { auditLog } from "../middleware/audit.middleware";
-import { AuditAction, EntityType } from "@prisma/client";
+import { AuditAction, EntityType, ProjectMemberRole } from "@prisma/client";
 import { getRelatedProjectsController } from "../controllers/project_relationship.controller";
 
 const router = Router();
@@ -225,18 +226,22 @@ router.post(
   checkAssignmentLimit,
   [
     check("userId", "User ID is required").notEmpty(),
-    // check("permissionIds", "Permission IDs must be an array").isArray(),
+    check("role", "Role must be valid")
+      .optional()
+      .isIn(["PROJECT_MANAGER", "TEAM_MEMBER", "OBSERVER"]),
+    ,
     validate,
   ],
   asyncHandler(async (req: any, res: any) => {
     const { projectId } = req.params;
-    const { userId, permissionIds } = req.body;
+    const { userId, permissionIds, role } = req.body;
 
     const projectMember = await addProjectMember(
       projectId,
       userId,
       permissionIds,
-      req.user!.userId
+      req.user!.userId,
+      role || ProjectMemberRole.TEAM_MEMBER
     );
 
     res.status(201).json({
@@ -257,6 +262,9 @@ router.put(
   checkProjectPermission("project.edit"),
   [
     check("permissionIds", "Permission IDs must be an array").isArray(),
+    check("role", "Role must be valid")
+      .optional()
+      .isIn(["PROJECT_MANAGER", "TEAM_MEMBER", "OBSERVER"]),
     validate,
   ],
   auditLog({
@@ -265,21 +273,69 @@ router.put(
   }),
   asyncHandler(async (req: any, res: any) => {
     const { projectId, userId } = req.params;
-    const { permissionIds } = req.body;
+    const { permissionIds, role } = req.body;
 
+    // If only role is being updated
+    if (role && !permissionIds) {
+      const projectMember = await updateProjectMemberRole(
+        projectId,
+        userId,
+        role as ProjectMemberRole,
+        req.user!.userId
+      );
+      return res.status(200).json({
+        success: true,
+        data: projectMember,
+        message: "Member role updated successfully",
+      });
+    }
+
+    // If permissions are being updated (with or without role)
     const projectMember = await updateProjectMemberPermissions(
       projectId,
       userId,
-      permissionIds
+      permissionIds,
+      role as ProjectMemberRole | undefined // 👈 ADD THIS
     );
 
     res.status(200).json({
       success: true,
       data: projectMember,
+      message: "Member updated successfully",
     });
   })
 );
 
+router.patch(
+  "/:projectId/members/:userId/role",
+  authenticate,
+  checkProjectPermission("project.edit"),
+  [
+    check("role", "Role is required")
+      .notEmpty()
+      .isIn(["PROJECT_MANAGER", "TEAM_MEMBER", "OBSERVER"]),
+    validate,
+  ],
+  asyncHandler(async (req: any, res: any) => {
+    const { projectId, userId } = req.params;
+    const { role } = req.body;
+
+    const projectMember = await updateProjectMemberRole(
+      projectId,
+      userId,
+      role as ProjectMemberRole,
+      req.user!.userId
+    );
+
+    res.status(200).json({
+      success: true,
+      data: projectMember,
+      message: `Role updated to ${role
+        .toLowerCase()
+        .replace("_", " ")} successfully`,
+    });
+  })
+);
 /**
  * @route   DELETE /api/projects/:projectId/members/:userId
  * @desc    Remove member from project
