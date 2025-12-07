@@ -638,7 +638,7 @@ export const getTaskWithBacklogContext = async (
         select: {
           id: true,
           name: true,
-          pillar: {
+          portfolio: {
             select: {
               id: true,
               name: true,

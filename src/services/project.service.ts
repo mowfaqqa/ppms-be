@@ -17,18 +17,18 @@ export const createProject = async (
     startDate: Date;
     endDate: Date;
     status?: ProjectStatus;
-    pillarId: string;
-    relatedProjectIds?: string[]; // New optional field
+    portfolioId: string;
+    relatedProjectIds?: string[];
   },
   userId: string
 ): Promise<any> => {
-  // Check if pillar exists
-  const pillar = await prisma.pillar.findUnique({
-    where: { id: data.pillarId },
+  // Check if portfolio exists
+  const portfolio = await prisma.portfolio.findUnique({
+    where: { id: data.portfolioId },
   });
 
-  if (!pillar) {
-    throw new ApiError(HttpStatus.NOT_FOUND, "Pillar not found");
+  if (!portfolio) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Portfolio not found");
   }
 
   // Check start date and end date
@@ -67,7 +67,7 @@ export const createProject = async (
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
         status: data.status || "PLANNING",
-        pillarId: data.pillarId,
+        portfolioId: data.portfolioId,
       },
     });
 
@@ -115,14 +115,14 @@ export const createProject = async (
 
 // Get all projects (with optional filters)
 export const getAllProjects = async (filters?: {
-  pillarId?: string;
+  portfolioId?: string;
   status?: ProjectStatus;
   search?: string;
 }): Promise<any[]> => {
   const where: any = {};
 
-  if (filters?.pillarId) {
-    where.pillarId = filters.pillarId;
+  if (filters?.portfolioId) {
+    where.portfolioId = filters.portfolioId;
   }
 
   if (filters?.status) {
@@ -139,17 +139,11 @@ export const getAllProjects = async (filters?: {
   return prisma.project.findMany({
     where,
     include: {
-      pillar: {
+      portfolio: {
         select: {
           id: true,
           name: true,
-          portfolio: {
-            select: {
-              id: true,
-              name: true,
-              year: true,
-            },
-          },
+          year: true,
         },
       },
       _count: {
@@ -164,23 +158,16 @@ export const getAllProjects = async (filters?: {
     },
   });
 };
-
 // Get project by ID
 export const getProjectById = async (id: string): Promise<any> => {
   const project = await prisma.project.findUnique({
     where: { id },
     include: {
-      pillar: {
+      portfolio: {
         select: {
           id: true,
           name: true,
-          portfolio: {
-            select: {
-              id: true,
-              name: true,
-              year: true,
-            },
-          },
+          year: true,
         },
       },
       members: {
@@ -252,7 +239,7 @@ export const updateProject = async (
     startDate?: Date;
     endDate?: Date;
     status?: ProjectStatus;
-    pillarId?: string;
+    portfolioId?: string;
   }
 ): Promise<Project> => {
   // Check if project exists
@@ -264,14 +251,14 @@ export const updateProject = async (
     throw new ApiError(HttpStatus.NOT_FOUND, "Project not found");
   }
 
-  // If updating pillar, check if pillar exists
-  if (data.pillarId && data.pillarId !== project.pillarId) {
-    const pillar = await prisma.pillar.findUnique({
-      where: { id: data.pillarId },
+  // If updating portfolio, check if portfolio exists
+  if (data.portfolioId && data.portfolioId !== project.portfolioId) {
+    const portfolio = await prisma.portfolio.findUnique({
+      where: { id: data.portfolioId },
     });
 
-    if (!pillar) {
-      throw new ApiError(HttpStatus.NOT_FOUND, "New pillar not found");
+    if (!portfolio) {
+      throw new ApiError(HttpStatus.NOT_FOUND, "New portfolio not found");
     }
   }
 
@@ -307,7 +294,7 @@ export const updateProject = async (
       startDate: data.startDate ? new Date(data.startDate) : undefined,
       endDate: data.endDate ? new Date(data.endDate) : undefined,
       status: data.status,
-      pillarId: data.pillarId,
+      portfolioId: data.portfolioId,
     },
   });
 };

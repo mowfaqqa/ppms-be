@@ -23,11 +23,8 @@ router.post(
   "/",
   authenticate,
   authorize(["ADMIN"]),
-  [
-    check("name", "Name is required").notEmpty(),
-    validate,
-  ],
-  asyncHandler(async (req:any, res:any) => {
+  [check("name", "Name is required").notEmpty(), validate],
+  asyncHandler(async (req: any, res: any) => {
     const { name, description, startDate, endDate, status } = req.body;
 
     const portfolio = await createPortfolio({
@@ -35,7 +32,7 @@ router.post(
       description,
       startDate,
       endDate,
-      status
+      status,
     });
 
     res.status(201).json({
@@ -53,7 +50,7 @@ router.post(
 router.get(
   "/",
   authenticate,
-  asyncHandler(async (req:any, res:any) => {
+  asyncHandler(async (req: any, res: any) => {
     const portfolios = await getAllPortfolios();
 
     res.status(200).json({
@@ -71,7 +68,7 @@ router.get(
 router.get(
   "/:id",
   authenticate,
-  asyncHandler(async (req:any, res:any) => {
+  asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
     const portfolio = await getPortfolioById(id);
@@ -97,7 +94,7 @@ router.put(
     check("year", "Year must be a number if provided").optional().isInt(),
     validate,
   ],
-  asyncHandler(async (req:any, res:any) => {
+  asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
     const { name, year, description } = req.body;
 
@@ -123,7 +120,7 @@ router.delete(
   "/:id",
   authenticate,
   authorize(["ADMIN"]),
-  asyncHandler(async (req:any, res:any) => {
+  asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
     await deletePortfolio(id);
@@ -143,7 +140,7 @@ router.delete(
 router.get(
   "/:id/stats",
   authenticate,
-  asyncHandler(async (req:any, res:any) => {
+  asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
     const stats = await getPortfolioStats(id);
@@ -151,6 +148,108 @@ router.get(
     res.status(200).json({
       success: true,
       data: stats,
+    });
+  })
+);
+/**
+ * @route   GET /api/portfolios/:id/analytics
+ * @desc    Get comprehensive portfolio analytics
+ * @access  Private
+ */
+router.get(
+  "/:id/analytics",
+  authenticate,
+  asyncHandler(async (req: any, res: any) => {
+    const { id } = req.params;
+    const { PrismaClient } = await import("@prisma/client");
+    const { ApiError, HttpStatus } = await import("../utils/error.utils");
+    const prisma = new PrismaClient();
+
+    // Get basic stats
+    const stats = await getPortfolioStats(id);
+
+    // Get additional portfolio data for detailed analytics
+    const portfolio = await prisma.portfolio.findUnique({
+      where: { id },
+      include: {
+        projects: {
+          include: {
+            members: {
+              include: {
+                user: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!portfolio) {
+      throw new ApiError(HttpStatus.NOT_FOUND, "Portfolio not found");
+    }
+
+    const onTimeProjects = portfolio.projects.filter((project) => {
+      const now = new Date();
+      const endDate = new Date(project.endDate);
+      return project.status === "COMPLETED" || now <= endDate;
+    }).length;
+
+    const totalProjects = portfolio.projects.length;
+    const onTimeProjectsPercentage =
+      totalProjects > 0 ? (onTimeProjects / totalProjects) * 100 : 100;
+
+    // Count active issues
+    let activeIssues = 0;
+    const now = new Date();
+    portfolio.projects.forEach((project) => {
+      const isOverdue =
+        now > new Date(project.endDate) && project.status !== "COMPLETED";
+
+      if (isOverdue) {
+        activeIssues++;
+      }
+    });
+
+    const analytics = {
+      activeProjects: stats.projects?.IN_PROGRESS || 0,
+      completedProjects: stats.projects?.COMPLETED || 0,
+      totalTeamMembers: new Set(
+        portfolio.projects.flatMap((project) =>
+          project.members.map((member) => member.userId)
+        )
+      ).size,
+      onTimeProjects,
+      onTimeProjectsPercentage:
+        Math.round(onTimeProjectsPercentage * 100) / 100,
+      activeIssues,
+      totalProjects,
+    };
+
+    res.status(200).json({
+      success: true,
+      data: analytics,
+    });
+  })
+);
+
+/**
+ * @route   GET /api/portfolios/:id/projects
+ * @desc    Get projects for a specific portfolio
+ * @access  Private
+ */
+router.get(
+  "/:id/projects",
+  authenticate,
+  asyncHandler(async (req: any, res: any) => {
+    const { id: portfolioId } = req.params;
+    const { getAllPortfolioProjects } = await import(
+      "../services/portfolio.service"
+    );
+    const projects = await getAllPortfolioProjects(portfolioId);
+
+    res.status(200).json({
+      success: true,
+      data: projects,
     });
   })
 );

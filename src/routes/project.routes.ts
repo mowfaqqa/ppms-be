@@ -42,7 +42,7 @@ router.post(
   authorize(["ADMIN", "PROJECT_MANAGER"]),
   [
     check("name", "Name is required").notEmpty(),
-    check("pillarId", "Pillar ID is required").notEmpty(),
+    check("portfolioId", "Portfolio ID is required").notEmpty(),
     check("startDate", "Start date is required")
       .notEmpty()
       .isISO8601()
@@ -55,7 +55,7 @@ router.post(
     entityType: EntityType.PROJECT,
   }),
   asyncHandler(async (req: any, res: any) => {
-    const { name, description, startDate, endDate, status, pillarId } =
+    const { name, description, startDate, endDate, status, portfolioId } =
       req.body;
 
     const project = await createProject(
@@ -65,7 +65,7 @@ router.post(
         startDate,
         endDate,
         status,
-        pillarId,
+        portfolioId,
       },
       req.user!.userId
     );
@@ -86,10 +86,10 @@ router.get(
   "/",
   authenticate,
   asyncHandler(async (req: any, res: any) => {
-    const { pillarId, status, search } = req.query;
+    const { portfolioId, status, search } = req.query;
 
     const projects = await getAllProjects({
-      pillarId: pillarId as string,
+      portfolioId: portfolioId as string,
       status: status as any,
       search: search as string,
     });
@@ -146,7 +146,7 @@ router.put(
   ],
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
-    const { name, description, startDate, endDate, status, pillarId } =
+    const { name, description, startDate, endDate, status, portfolioId } =
       req.body;
 
     const project = await updateProject(id, {
@@ -155,7 +155,7 @@ router.put(
       startDate,
       endDate,
       status,
-      pillarId,
+      portfolioId,
     });
 
     res.status(200).json({

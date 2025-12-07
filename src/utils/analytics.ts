@@ -39,11 +39,7 @@ const calculateTimelineHealth = async (
     const portfolio = await prisma.portfolio.findUnique({
       where: { id: portfolioId },
       include: {
-        pillars: {
-          include: {
-            projects: true,
-          },
-        },
+        projects: true,
       },
     });
 
@@ -55,36 +51,34 @@ const calculateTimelineHealth = async (
     let warningProjects = 0;
     let criticalProjects = 0;
 
-    portfolio.pillars.forEach((pillar) => {
-      pillar.projects.forEach((project) => {
-        totalProjects++;
+    portfolio.projects.forEach((project) => {
+      totalProjects++;
 
-        const endDate = new Date(project.endDate);
-        const startDate = new Date(project.startDate);
-        const totalDuration = endDate.getTime() - startDate.getTime();
-        const elapsed = now.getTime() - startDate.getTime();
-        const progressRatio = elapsed / totalDuration;
+      const endDate = new Date(project.endDate);
+      const startDate = new Date(project.startDate);
+      const totalDuration = endDate.getTime() - startDate.getTime();
+      const elapsed = now.getTime() - startDate.getTime();
+      const progressRatio = elapsed / totalDuration;
 
-        // Determine project health based on status and timeline
-        if (project.status === "COMPLETED") {
-          healthyProjects++;
-        } else if (project.status === "CANCELLED") {
-          // Don't count cancelled projects in health calculation
-          totalProjects--;
-        } else if (now > endDate) {
-          // Overdue projects are critical
+      // Determine project health based on status and timeline
+      if (project.status === "COMPLETED") {
+        healthyProjects++;
+      } else if (project.status === "CANCELLED") {
+        // Don't count cancelled projects in health calculation
+        totalProjects--;
+      } else if (now > endDate) {
+        // Overdue projects are critical
+        criticalProjects++;
+      } else if (progressRatio > 0.8) {
+        // Projects in final 20% of timeline need attention
+        if (project.status === "PLANNING" || project.status === "ON_HOLD") {
           criticalProjects++;
-        } else if (progressRatio > 0.8) {
-          // Projects in final 20% of timeline need attention
-          if (project.status === "PLANNING" || project.status === "ON_HOLD") {
-            criticalProjects++;
-          } else {
-            warningProjects++;
-          }
         } else {
-          healthyProjects++;
+          warningProjects++;
         }
-      });
+      } else {
+        healthyProjects++;
+      }
     });
 
     if (totalProjects === 0) return 100;
@@ -117,17 +111,9 @@ const getPortfolioAnalytics = async (portfolioId: string) => {
     const portfolio = await prisma.portfolio.findUnique({
       where: { id: portfolioId },
       include: {
-        pillars: {
+        projects: {
           include: {
-            projects: {
-              include: {
-                members: {
-                  include: {
-                    user: true,
-                  },
-                },
-              },
-            },
+            members: true,
           },
         },
       },
@@ -140,30 +126,20 @@ const getPortfolioAnalytics = async (portfolioId: string) => {
     // Calculate team members
     let totalTeamMembers = new Set();
 
-    portfolio.pillars.forEach((pillar) => {
-      pillar.projects.forEach((project) => {
-        // Count unique team members
-        project.members.forEach((member) => {
-          totalTeamMembers.add(member.user.id);
-        });
+    portfolio.projects.forEach((project) => {
+      // Count unique team members
+      project.members.forEach((member) => {
+        totalTeamMembers.add(member.userId);
       });
     });
 
-    const onTimeProjects = portfolio.pillars.reduce((count, pillar) => {
-      return (
-        count +
-        pillar.projects.filter((project) => {
-          const now = new Date();
-          const endDate = new Date(project.endDate);
-          return project.status === "COMPLETED" || now <= endDate;
-        }).length
-      );
-    }, 0);
+    const onTimeProjects = portfolio.projects.filter((project) => {
+      const now = new Date();
+      const endDate = new Date(project.endDate);
+      return project.status === "COMPLETED" || now <= endDate;
+    }).length;
 
-    const totalProjects = portfolio.pillars.reduce(
-      (count, pillar) => count + pillar.projects.length,
-      0
-    );
+    const totalProjects = portfolio.projects.length;
     const onTimeProjectsPercentage =
       totalProjects > 0 ? (onTimeProjects / totalProjects) * 100 : 100;
 
@@ -171,24 +147,19 @@ const getPortfolioAnalytics = async (portfolioId: string) => {
     let riskLevel = "LOW";
     if (timelineHealth < 50 || overallProgress < 30) {
       riskLevel = "HIGH";
-    } else if (
-      timelineHealth < 70 ||
-      overallProgress < 50
-    ) {
+    } else if (timelineHealth < 70 || overallProgress < 50) {
       riskLevel = "MEDIUM";
     }
 
     // Count active issues (projects that are overdue)
     let activeIssues = 0;
     const now = new Date();
-    portfolio.pillars.forEach((pillar) => {
-      pillar.projects.forEach((project) => {
-        const isOverdue =
-          now > new Date(project.endDate) && project.status !== "COMPLETED";
-        if (isOverdue) {
-          activeIssues++;
-        }
-      });
+    portfolio.projects.forEach((project) => {
+      const isOverdue =
+        now > new Date(project.endDate) && project.status !== "COMPLETED";
+      if (isOverdue) {
+        activeIssues++;
+      }
     });
 
     return {

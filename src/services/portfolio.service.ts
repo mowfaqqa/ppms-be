@@ -14,7 +14,7 @@ export const createPortfolio = async (data: {
 }): Promise<Portfolio> => {
   // Extract year from startDate if not provided
   const year = new Date().getFullYear();
-  
+
   // Check if portfolio with same name and year already exists
   const existingPortfolio = await prisma.portfolio.findFirst({
     where: {
@@ -55,31 +55,21 @@ export const getAllPortfolios = async (): Promise<Portfolio[]> => {
 // Get portfolio by ID
 export const getPortfolioById = async (
   id: string
-): Promise<Portfolio & { pillars: any[] }> => {
+): Promise<Portfolio & { projects: any[] }> => {
   const portfolio = await prisma.portfolio.findUnique({
     where: { id },
     include: {
-      pillars: {
+      projects: {
         include: {
-          projects: {
-            select: {
-              id: true,
-              name: true,
-              status: true,
-              startDate: true,
-              endDate: true,
-              _count: {
-                select: {
-                  tasks: true,
-                },
-              },
-            },
-          },
           _count: {
             select: {
-              projects: true,
+              tasks: true,
+              members: true,
             },
           },
+        },
+        orderBy: {
+          createdAt: "desc",
         },
       },
     },
@@ -145,11 +135,7 @@ export const deletePortfolio = async (id: string): Promise<void> => {
   const portfolio = await prisma.portfolio.findUnique({
     where: { id },
     include: {
-      pillars: {
-        include: {
-          projects: true,
-        },
-      },
+      projects: true,
     },
   });
 
@@ -157,7 +143,7 @@ export const deletePortfolio = async (id: string): Promise<void> => {
     throw new ApiError(HttpStatus.NOT_FOUND, "Portfolio not found");
   }
 
-  // Delete portfolio (cascade will delete pillars, projects, tasks, etc.)
+  // Delete portfolio (cascade will delete projects, tasks, etc.)
   await prisma.portfolio.delete({
     where: { id },
   });
@@ -174,17 +160,10 @@ export const getPortfolioStats = async (id: string) => {
     throw new ApiError(HttpStatus.NOT_FOUND, "Portfolio not found");
   }
 
-  // Get pillar count
-  const pillarCount = await prisma.pillar.count({
-    where: { portfolioId: id },
-  });
-
-  // Get project counts by status
+  // Get project counts by status - directly from portfolio
   const projects = await prisma.project.findMany({
     where: {
-      pillar: {
-        portfolioId: id,
-      },
+      portfolioId: id,
     },
     select: {
       id: true,
@@ -209,9 +188,7 @@ export const getPortfolioStats = async (id: string) => {
   const tasks = await prisma.task.findMany({
     where: {
       project: {
-        pillar: {
-          portfolioId: id,
-        },
+        portfolioId: id,
       },
     },
     select: {
@@ -233,8 +210,36 @@ export const getPortfolioStats = async (id: string) => {
   });
 
   return {
-    pillarCount,
+    projectCount: projects.length,
     projects: projectsByStatus,
     tasks: tasksByStatus,
   };
+};
+
+export const getAllPortfolioProjects = async (portfolioId: string) => {
+  // Check if portfolio exists
+  const portfolio = await prisma.portfolio.findUnique({
+    where: { id: portfolioId },
+  });
+
+  if (!portfolio) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Portfolio not found");
+  }
+
+  return prisma.project.findMany({
+    where: {
+      portfolioId,
+    },
+    include: {
+      _count: {
+        select: {
+          tasks: true,
+          members: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 };

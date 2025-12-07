@@ -63,33 +63,20 @@ model Portfolio {
   startDate   DateTime? // Portfolio start date  
   endDate     DateTime? // Portfolio end date
   status      String? // Portfolio status
-  pillars     Pillar[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-// Pillars (categories)
-model Pillar {
-  id          String    @id @default(cuid())
-  name        String
-  description String?
-  portfolioId String
-  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
   projects    Project[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
 
-// Projects within pillars
+// Projects within portfolios
 model Project {
   id           String                @id @default(cuid())
   name         String
   description  String?
   startDate    DateTime
   endDate      DateTime
+  portfolioId  String
   status       ProjectStatus         @default(PLANNING)
-  pillarId     String
-  pillar       Pillar                @relation(fields: [pillarId], references: [id], onDelete: Cascade)
   tasks        Task[]
   members      ProjectMember[]
   files        File[]
@@ -99,6 +86,7 @@ model Project {
   sprints      Sprint[]
   backlogItems BacklogItem[]
   methodology  ProjectMethodology?
+  portfolio    Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
   relatedFrom  ProjectRelationship[] @relation("RelatedFrom")
   relatedTo    ProjectRelationship[] @relation("RelatedTo")
   createdAt    DateTime              @default(now())
@@ -372,7 +360,7 @@ model Activity {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id])
-  entityType  String // "portfolio", "pillar", "project", "task"
+  entityType  String // "portfolio", "project", "task"
   entityId    String
   action      String // "created", "updated", "deleted", "assigned", etc.
   description String

@@ -116,15 +116,15 @@ export const createProjectController = async (
       startDate,
       endDate,
       status,
-      pillarId,
+      portfolioId,
       relatedProjectIds,
     } = req.body;
 
     // Validation
-    if (!name || !startDate || !endDate || !pillarId) {
+    if (!name || !startDate || !endDate || !portfolioId) {
       throw new ApiError(
         HttpStatus.BAD_REQUEST,
-        "name, startDate, endDate, and pillarId are required"
+        "name, startDate, endDate, and portfolioId are required"
       );
     }
 
@@ -135,8 +135,8 @@ export const createProjectController = async (
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         status,
-        pillarId,
-        relatedProjectIds, 
+        portfolioId,
+        relatedProjectIds,
       },
       userId
     );

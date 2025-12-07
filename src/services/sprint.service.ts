@@ -151,7 +151,7 @@ export const getSprintById = async (sprintId: string): Promise<any> => {
         select: {
           id: true,
           name: true,
-          pillar: {
+          portfolio: {
             select: {
               id: true,
               name: true,
