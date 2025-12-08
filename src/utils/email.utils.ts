@@ -56,7 +56,7 @@ export const sendUserCreatedEmail = async (
             padding: 20px;
           }
           .header {
-            background-color: #4F46E5;
+            background-color: #800000;
             color: white;
             padding: 20px;
             text-align: center;
@@ -71,7 +71,7 @@ export const sendUserCreatedEmail = async (
           }
           .credentials-box {
             background-color: white;
-            border: 2px solid #4F46E5;
+            border: 2px solid #800000;
             border-radius: 8px;
             padding: 20px;
             margin: 20px 0;
@@ -84,7 +84,7 @@ export const sendUserCreatedEmail = async (
           }
           .credential-label {
             font-weight: bold;
-            color: #4F46E5;
+            color: #800000;
             display: block;
             margin-bottom: 5px;
           }
@@ -102,7 +102,7 @@ export const sendUserCreatedEmail = async (
           }
           .button {
             display: inline-block;
-            background-color: #4F46E5;
+            background-color: #800000;
             color: white;
             padding: 12px 30px;
             text-decoration: none;
@@ -120,7 +120,7 @@ export const sendUserCreatedEmail = async (
           }
           .instructions {
             background-color: #dbeafe;
-            border-left: 4px solid #3b82f6;
+            border-left: 4px solid #800000;
             padding: 15px;
             margin: 20px 0;
             border-radius: 4px;
