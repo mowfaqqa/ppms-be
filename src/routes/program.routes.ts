@@ -30,7 +30,7 @@ router.post(
   authorize(["ADMIN", "PROGRAM_MANAGER"]),
   [
     check("name", "Name is required").notEmpty(),
-    check("portfolioId", "Portfolio ID is required").notEmpty().isUUID(),
+    check("portfolioId", "Portfolio ID is required").notEmpty(),
     check("startDate", "Start date is required")
       .notEmpty()
       .isISO8601()
@@ -75,7 +75,7 @@ router.get(
   "/",
   authenticate,
   [
-    check("portfolioId", "Invalid portfolio ID format").optional().isUUID(),
+    check("portfolioId", "Invalid portfolio ID format").optional(),
     check("status", "Invalid status")
       .optional()
       .isIn(["PLANNING", "IN_PROGRESS", "ON_HOLD", "COMPLETED", "CANCELLED"]),
@@ -139,7 +139,7 @@ router.put(
     check("status", "Invalid status")
       .optional()
       .isIn(["PLANNING", "IN_PROGRESS", "ON_HOLD", "COMPLETED", "CANCELLED"]),
-    check("portfolioId", "Invalid portfolio ID format").optional().isUUID(),
+    check("portfolioId", "Invalid portfolio ID format").optional(),
     validate,
   ],
   auditLog({
@@ -279,9 +279,7 @@ router.post(
   authenticate,
   authorize(["ADMIN"]),
   [
-    check("targetPortfolioId", "Target portfolio ID is required")
-      .notEmpty()
-      .isUUID(),
+    check("targetPortfolioId", "Target portfolio ID is required").notEmpty(),
     validate,
   ],
   auditLog({

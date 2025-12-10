@@ -120,7 +120,7 @@ router.get(
   authenticate,
   authorize(["ADMIN", "PROJECT_MANAGER"]),
   [
-    check("userId", "Invalid user ID format").optional().isUUID(),
+    check("userId", "Invalid user ID format").optional(),
     check("entityType", "Invalid entity type")
       .optional()
       .isIn([
@@ -136,7 +136,7 @@ router.get(
         "PROJECT_MEMBER",
         "TASK_ASSIGNMENT",
       ]),
-    check("entityId", "Invalid entity ID format").optional().isUUID(),
+    check("entityId", "Invalid entity ID format").optional(),
     check("startDate", "Invalid start date format")
       .optional()
       .isISO8601()
@@ -259,7 +259,7 @@ router.get(
   authenticate,
   authorize(["ADMIN"]),
   [
-    check("userId", "Invalid user ID format").optional().isUUID(),
+    check("userId", "Invalid user ID format").optional(),
     check("entityType", "Invalid entity type")
       .optional()
       .isIn([
@@ -273,7 +273,7 @@ router.get(
         "SETTING",
         "PERMISSION",
       ]),
-    check("entityId", "Invalid entity ID format").optional().isUUID(),
+    check("entityId", "Invalid entity ID format").optional(),
     check("startDate", "Invalid start date format")
       .optional()
       .isISO8601()

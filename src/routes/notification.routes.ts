@@ -147,7 +147,7 @@ router.get(
 router.patch(
   "/:id/read",
   authenticate,
-  [check("id", "Invalid notification ID").isUUID(), validate],
+  [check("id", "Invalid notification ID"), validate],
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
@@ -194,7 +194,7 @@ router.patch(
 router.delete(
   "/:id",
   authenticate,
-  [check("id", "Invalid notification ID").isUUID(), validate],
+  [check("id", "Invalid notification ID"), validate],
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 

@@ -37,18 +37,24 @@ router.post(
     }),
     check("email", "Please include a valid email").isEmail().normalizeEmail(),
     check("staffId", "Staff ID is required").notEmpty().trim(),
-    check("staffId", "Staff ID must be alphanumeric").matches(/^[a-zA-Z0-9-_]+$/),
+    check("staffId", "Staff ID must be alphanumeric").matches(
+      /^[a-zA-Z0-9-_]+$/
+    ),
     check("department", "Department must not exceed 100 characters")
       .optional()
       .isLength({ max: 100 }),
     check("phoneNumber", "Phone number must be valid")
       .optional()
-      .matches(/^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/),
+      .matches(
+        /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/
+      ),
     check("position", "Position must not exceed 100 characters")
       .optional()
       .isLength({ max: 100 }),
-    check("role", "Role must be either PROJECT_MANAGER or TEAM_MEMBER")
-      .isIn(["PROJECT_MANAGER", "TEAM_MEMBER"]),
+    check("role", "Role must be either PROJECT_MANAGER or TEAM_MEMBER").isIn([
+      "PROJECT_MANAGER",
+      "TEAM_MEMBER",
+    ]),
     validate,
   ],
   asyncHandler(async (req: any, res: any) => {
@@ -180,7 +186,9 @@ router.put(
       .isLength({ max: 100 }),
     check("phoneNumber", "Phone number must be valid")
       .optional()
-      .matches(/^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/),
+      .matches(
+        /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/
+      ),
     check("position", "Position must not exceed 100 characters")
       .optional()
       .isLength({ max: 100 }),
@@ -248,7 +256,8 @@ router.delete(
 
     res.status(200).json({
       success: true,
-      message: "User deleted successfully. All associated tasks have been unassigned.",
+      message:
+        "User deleted successfully. All associated tasks have been unassigned.",
     });
   })
 );
@@ -268,7 +277,12 @@ router.post(
     const ipAddress = req.ip || req.connection.remoteAddress;
     const userAgent = req.get("user-agent");
 
-    const user = await reactivateUser(id, req.user!.userId, ipAddress, userAgent);
+    const user = await reactivateUser(
+      id,
+      req.user!.userId,
+      ipAddress,
+      userAgent
+    );
 
     res.status(200).json({
       success: true,
@@ -290,7 +304,7 @@ router.get(
   authenticate,
   authorize(["ADMIN", "PROJECT_MANAGER"]),
   [
-    check("userId", "Invalid user ID format").optional().isUUID(),
+    check("userId", "Invalid user ID format").optional(),
     check("entityType", "Invalid entity type")
       .optional()
       .isIn([
@@ -306,7 +320,7 @@ router.get(
         "PROJECT_MEMBER",
         "TASK_ASSIGNMENT",
       ]),
-    check("entityId", "Invalid entity ID format").optional().isUUID(),
+    check("entityId", "Invalid entity ID format").optional(),
     check("action", "Invalid action")
       .optional()
       .isIn([
@@ -417,7 +431,7 @@ router.get(
   authenticate,
   authorize(["ADMIN"]),
   [
-    check("userId", "Invalid user ID format").optional().isUUID(),
+    check("userId", "Invalid user ID format").optional(),
     check("entityType", "Invalid entity type")
       .optional()
       .isIn([
@@ -468,7 +482,9 @@ router.get(
     });
 
     // Set headers for file download
-    const filename = `audit-trail-${new Date().toISOString().split("T")[0]}.csv`;
+    const filename = `audit-trail-${
+      new Date().toISOString().split("T")[0]
+    }.csv`;
     res.setHeader("Content-Type", "text/csv");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 

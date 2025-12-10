@@ -29,7 +29,7 @@ router.post(
   authorize(["ADMIN"]),
   [
     check("name", "Name is required").notEmpty(),
-    check("yearId", "Year ID is required").notEmpty().isUUID(),
+    check("yearId", "Year ID is required").notEmpty(),
     validate,
   ],
   asyncHandler(async (req: any, res: any) => {
@@ -60,7 +60,7 @@ router.get(
   "/",
   authenticate,
   [
-    check("yearId", "Invalid year ID format").optional().isUUID(),
+    check("yearId", "Invalid year ID format").optional(),
     check("search", "Search query must not exceed 100 characters")
       .optional()
       .isLength({ max: 100 }),
@@ -113,7 +113,7 @@ router.put(
   authorize(["ADMIN"]),
   [
     check("name", "Name must not be empty if provided").optional().notEmpty(),
-    check("yearId", "Invalid year ID format").optional().isUUID(),
+    check("yearId", "Invalid year ID format").optional(),
     validate,
   ],
   auditLog({
