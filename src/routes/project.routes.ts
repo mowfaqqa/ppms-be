@@ -55,8 +55,15 @@ router.post(
     entityType: EntityType.PROJECT,
   }),
   asyncHandler(async (req: any, res: any) => {
-    const { name, description, startDate, endDate, status, portfolioId } =
-      req.body;
+    const {
+      name,
+      description,
+      startDate,
+      endDate,
+      status,
+      portfolioId,
+      programId,
+    } = req.body;
 
     const project = await createProject(
       {
@@ -66,6 +73,7 @@ router.post(
         endDate,
         status,
         portfolioId,
+        programId,
       },
       req.user!.userId
     );
@@ -146,8 +154,15 @@ router.put(
   ],
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
-    const { name, description, startDate, endDate, status, portfolioId } =
-      req.body;
+    const {
+      name,
+      description,
+      startDate,
+      endDate,
+      status,
+      portfolioId,
+      programId,
+    } = req.body;
 
     const project = await updateProject(
       id,
@@ -158,6 +173,7 @@ router.put(
         endDate,
         status,
         portfolioId,
+        programId,
       },
       req.user!.userId,
       req.user!.role
