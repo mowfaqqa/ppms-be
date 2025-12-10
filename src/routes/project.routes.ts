@@ -149,14 +149,19 @@ router.put(
     const { name, description, startDate, endDate, status, portfolioId } =
       req.body;
 
-    const project = await updateProject(id, {
-      name,
-      description,
-      startDate,
-      endDate,
-      status,
-      portfolioId,
-    });
+    const project = await updateProject(
+      id,
+      {
+        name,
+        description,
+        startDate,
+        endDate,
+        status,
+        portfolioId,
+      },
+      req.user!.userId,
+      req.user!.role
+    );
 
     res.status(200).json({
       success: true,

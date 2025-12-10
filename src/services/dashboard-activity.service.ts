@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
 
 export interface UnifiedActivity {
   id: string;
-  type: "AUDIT_LOG" | "PROJECT_ACTIVITY" | "TASK_ACTIVITY";
+  type: "AUDIT_LOG" | "PROGRAM_ACTIVITY" | "PROJECT_ACTIVITY" | "TASK_ACTIVITY";
   action: string;
   description: string;
   timestamp: Date;
@@ -27,6 +27,10 @@ export interface UnifiedActivity {
     name?: string;
   };
   metadata?: {
+    portfolioId?: string;
+    portfolioName?: string;
+    programId?: string;
+    programName?: string;
     projectId?: string;
     projectName?: string;
     taskId?: string;
@@ -42,7 +46,7 @@ export interface UnifiedActivity {
 export const getDashboardActivities = async (
   filters: {
     userId?: string; // Filter by specific user
-    entityType?: string; // Filter by entity type (PROJECT, TASK, USER, etc.)
+    entityType?: string; // Filter by entity type (PROJECT, TASK, PROGRAM, etc.)
     entityId?: string; // Filter by specific entity
     startDate?: Date;
     endDate?: Date;
@@ -69,20 +73,25 @@ export const getDashboardActivities = async (
   }
 
   // Get activities from all sources in parallel
-  const [auditLogs, projectActivities, taskActivities] = await Promise.all([
-    // 1. Audit Logs
-    getAuditLogActivities(filters, dateFilter, requesterRole, requesterId),
+  const [auditLogs, programActivities, projectActivities, taskActivities] =
+    await Promise.all([
+      // 1. Audit Logs
+      getAuditLogActivities(filters, dateFilter, requesterRole, requesterId),
 
-    // 2. Project Activities
-    getProjectActivities(filters, dateFilter, requesterRole, requesterId),
+      // 2. Program Activities
+      getProgramActivities(filters, dateFilter, requesterRole, requesterId),
 
-    // 3. Task Activities
-    getTaskActivities(filters, dateFilter, requesterRole, requesterId),
-  ]);
+      // 3. Project Activities
+      getProjectActivities(filters, dateFilter, requesterRole, requesterId),
+
+      // 4. Task Activities
+      getTaskActivities(filters, dateFilter, requesterRole, requesterId),
+    ]);
 
   // Combine all activities
   let allActivities: UnifiedActivity[] = [
     ...auditLogs,
+    ...programActivities,
     ...projectActivities,
     ...taskActivities,
   ];
@@ -118,6 +127,7 @@ export const getDashboardActivities = async (
     summary: {
       totalActivities: total,
       auditLogCount: auditLogs.length,
+      programActivityCount: programActivities.length,
       projectActivityCount: projectActivities.length,
       taskActivityCount: taskActivities.length,
     },
@@ -153,6 +163,12 @@ async function getAuditLogActivities(
   // Apply entity ID filter
   if (filters.entityId) {
     where.entityId = filters.entityId;
+  }
+
+  // Program managers can only see logs for their portfolios/programs/projects
+  if (requesterRole === "PROGRAM_MANAGER") {
+    // Get portfolios where user can manage programs
+    // For now, program managers see everything (you can add more specific logic)
   }
 
   // Project managers can only see logs for their projects
@@ -219,6 +235,91 @@ async function getAuditLogActivities(
 }
 
 /**
+ * Get activities from program activity logs
+ */
+async function getProgramActivities(
+  filters: any,
+  dateFilter: any,
+  requesterRole: Role,
+  requesterId: string
+): Promise<UnifiedActivity[]> {
+  const where: any = {};
+
+  // Apply date filter
+  if (Object.keys(dateFilter).length > 0) {
+    where.createdAt = dateFilter;
+  }
+
+  // Apply user filter
+  if (filters.userId) {
+    where.userId = filters.userId;
+  }
+
+  // Filter by specific program if entityType is PROGRAM
+  if (filters.entityType === "PROGRAM" && filters.entityId) {
+    where.programId = filters.entityId;
+  }
+
+  // Program managers can see program activities (add specific logic if needed)
+  // Project managers cannot see program activities unless they're also program managers
+
+  const activities = await prisma.programActivity.findMany({
+    where,
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          staffId: true,
+          role: true,
+        },
+      },
+      program: {
+        select: {
+          id: true,
+          name: true,
+          portfolio: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 1000,
+  });
+
+  return activities.map((activity: any) => ({
+    id: activity.id,
+    type: "PROGRAM_ACTIVITY" as const,
+    action: activity.type,
+    description: activity.description,
+    timestamp: activity.createdAt,
+    user: {
+      id: activity.user.id,
+      name: activity.user.name,
+      email: activity.user.email,
+      staffId: activity.user.staffId,
+      role: activity.user.role,
+    },
+    entity: {
+      type: "PROGRAM",
+      id: activity.program.id,
+      name: activity.program.name,
+    },
+    metadata: {
+      programId: activity.program.id,
+      programName: activity.program.name,
+      portfolioId: activity.program.portfolio.id,
+      portfolioName: activity.program.portfolio.name,
+      ...activity.metadata,
+    },
+  }));
+}
+/**
  * Get activities from project activity logs
  */
 async function getProjectActivities(
@@ -270,6 +371,18 @@ async function getProjectActivities(
         select: {
           id: true,
           name: true,
+          program: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          portfolio: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       },
     },
@@ -298,6 +411,10 @@ async function getProjectActivities(
     metadata: {
       projectId: activity.project.id,
       projectName: activity.project.name,
+      programId: activity.project.program?.id,
+      programName: activity.project.program?.name,
+      portfolioId: activity.project.portfolio.id,
+      portfolioName: activity.project.portfolio.name,
       ...activity.metadata,
     },
   }));
@@ -364,6 +481,18 @@ async function getTaskActivities(
             select: {
               id: true,
               name: true,
+              program: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+              portfolio: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
             },
           },
         },
@@ -396,6 +525,10 @@ async function getTaskActivities(
       taskTitle: activity.task.title,
       projectId: activity.task.project.id,
       projectName: activity.task.project.name,
+      programId: activity.task.project.program?.id,
+      programName: activity.task.project.program?.name,
+      portfolioId: activity.task.project.portfolio.id,
+      portfolioName: activity.task.project.portfolio.name,
       ...activity.metadata,
     },
   }));
@@ -455,6 +588,7 @@ export const getActivityStats = async (
 
   const [
     auditLogCount,
+    programActivityCount,
     projectActivityCount,
     taskActivityCount,
     auditByAction,
@@ -462,6 +596,12 @@ export const getActivityStats = async (
   ] = await Promise.all([
     prisma.auditLog.count({
       where: { ...where, timestamp: dateFilter },
+    }),
+
+    prisma.programActivity.count({
+      where: {
+        createdAt: dateFilter,
+      },
     }),
 
     prisma.projectActivity.count({
@@ -543,9 +683,14 @@ export const getActivityStats = async (
   return {
     timeframe,
     startDate,
-    totalActivities: auditLogCount + projectActivityCount + taskActivityCount,
+    totalActivities:
+      auditLogCount +
+      programActivityCount +
+      projectActivityCount +
+      taskActivityCount,
     breakdown: {
       auditLogs: auditLogCount,
+      programActivities: programActivityCount,
       projectActivities: projectActivityCount,
       taskActivities: taskActivityCount,
     },

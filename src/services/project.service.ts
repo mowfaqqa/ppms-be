@@ -1,8 +1,10 @@
 import {
+  ActivityType,
   PrismaClient,
   Project,
   ProjectMemberRole,
   ProjectStatus,
+  Role,
 } from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
 import { notifyProjectAssignment, notifyMention } from "./notification.service";
@@ -10,6 +12,10 @@ import { notifyProjectAssignment, notifyMention } from "./notification.service";
 const prisma = new PrismaClient();
 
 // Create project
+/**
+ * Create a new project
+ * Can be standalone (programId = null) or under a program (programId set)
+ */
 export const createProject = async (
   data: {
     name: string;
@@ -18,10 +24,11 @@ export const createProject = async (
     endDate: Date;
     status?: ProjectStatus;
     portfolioId: string;
+    programId?: string | null; 
     relatedProjectIds?: string[];
   },
   userId: string
-): Promise<any> => {
+): Promise<Project> => {
   // Check if portfolio exists
   const portfolio = await prisma.portfolio.findUnique({
     where: { id: data.portfolioId },
@@ -31,98 +38,106 @@ export const createProject = async (
     throw new ApiError(HttpStatus.NOT_FOUND, "Portfolio not found");
   }
 
-  // Check start date and end date
-  if (new Date(data.startDate) > new Date(data.endDate)) {
-    throw new ApiError(
-      HttpStatus.BAD_REQUEST,
-      "Start date cannot be after end date"
-    );
-  }
-
-  // Validate related projects if provided
-  if (data.relatedProjectIds && data.relatedProjectIds.length > 0) {
-    const relatedProjects = await prisma.project.findMany({
-      where: {
-        id: {
-          in: data.relatedProjectIds,
-        },
-      },
+  // If programId is provided, check if program exists and belongs to the same portfolio
+  if (data.programId) {
+    const program = await prisma.program.findUnique({
+      where: { id: data.programId },
     });
 
-    if (relatedProjects.length !== data.relatedProjectIds.length) {
+    if (!program) {
+      throw new ApiError(HttpStatus.NOT_FOUND, "Program not found");
+    }
+
+    if (program.portfolioId !== data.portfolioId) {
       throw new ApiError(
         HttpStatus.BAD_REQUEST,
-        "One or more related projects not found"
+        "Program does not belong to the specified portfolio"
       );
     }
   }
 
-  // Create project with creator as project member and related projects
-  const project = await prisma.$transaction(async (tx) => {
-    // Create project
-    const newProject = await tx.project.create({
-      data: {
-        name: data.name,
-        description: data.description,
-        startDate: new Date(data.startDate),
-        endDate: new Date(data.endDate),
-        status: data.status || "PLANNING",
-        portfolioId: data.portfolioId,
-      },
-    });
-
-    // Get all permissions
-    const permissions = await tx.permission.findMany({
-      where: {
-        name: {
-          startsWith: "project.",
-        },
-      },
-    });
-
-    // Add creator as project member with all permissions
-    await tx.projectMember.create({
-      data: {
-        userId,
-        projectId: newProject.id,
-        permissions: {
-          connect: permissions.map((p) => ({ id: p.id })),
-        },
-      },
-    });
-
-    // Create project relationships if provided
-    if (data.relatedProjectIds && data.relatedProjectIds.length > 0) {
-      for (const relatedId of data.relatedProjectIds) {
-        // Create relationship (store in one direction: smaller ID -> larger ID)
-        const [fromId, toId] = [newProject.id, relatedId].sort();
-        await tx.projectRelationship.create({
-          data: {
-            fromProjectId: fromId,
-            toProjectId: toId,
-          },
-        });
-      }
-    }
-
-    return newProject;
+  // Check if project with same name already exists in this portfolio
+  const existingProject = await prisma.project.findFirst({
+    where: {
+      name: data.name,
+      portfolioId: data.portfolioId,
+    },
   });
 
-  // Fetch the complete project with relationships
-  const completeProject = await getProjectById(project.id);
-  return completeProject;
+  if (existingProject) {
+    throw new ApiError(
+      HttpStatus.CONFLICT,
+      `Project with name '${data.name}' already exists in this portfolio`
+    );
+  }
+
+  // Validate dates
+  if (new Date(data.startDate) > new Date(data.endDate)) {
+    throw new ApiError(
+      HttpStatus.BAD_REQUEST,
+      "Start date must be before end date"
+    );
+  }
+
+  // Create project
+  const project = await prisma.project.create({
+    data: {
+      name: data.name,
+      description: data.description,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      status: data.status || ProjectStatus.PLANNING,
+      portfolioId: data.portfolioId,
+      programId: data.programId,
+    },
+    include: {
+      portfolio: true,
+      program: true,
+    },
+  });
+
+  // Log activity
+  await prisma.projectActivity.create({
+    data: {
+      type: ActivityType.PROJECT_CREATED,
+      description: `Project "${project.name}" created${
+        project.programId ? " under program" : " as standalone"
+      }`,
+      projectId: project.id,
+      userId: userId,
+      metadata: {
+        status: project.status,
+        programId: project.programId,
+      },
+    },
+  });
+
+  return project;
 };
 
-// Get all projects (with optional filters)
+/**
+ * Get all projects with optional filters
+ */
 export const getAllProjects = async (filters?: {
   portfolioId?: string;
+  programId?: string;
   status?: ProjectStatus;
   search?: string;
-}): Promise<any[]> => {
+  standalone?: boolean; // Filter for standalone projects only
+}) => {
   const where: any = {};
 
   if (filters?.portfolioId) {
     where.portfolioId = filters.portfolioId;
+  }
+
+  if (filters?.programId) {
+    where.programId = filters.programId;
+  }
+
+  // Filter for standalone projects
+  if (filters?.standalone === true) {
+    where.programId = null;
   }
 
   if (filters?.status) {
@@ -130,22 +145,21 @@ export const getAllProjects = async (filters?: {
   }
 
   if (filters?.search) {
-    where.name = {
-      contains: filters.search,
-      mode: "insensitive",
-    };
+    where.OR = [
+      { name: { contains: filters.search, mode: "insensitive" } },
+      { description: { contains: filters.search, mode: "insensitive" } },
+    ];
   }
 
   return prisma.project.findMany({
     where,
     include: {
       portfolio: {
-        select: {
-          id: true,
-          name: true,
+        include: {
           year: true,
         },
       },
+      program: true,
       _count: {
         select: {
           tasks: true,
@@ -154,20 +168,47 @@ export const getAllProjects = async (filters?: {
       },
     },
     orderBy: {
-      startDate: "asc",
+      createdAt: "desc",
     },
   });
 };
-// Get project by ID
-export const getProjectById = async (id: string): Promise<any> => {
+
+/**
+ * Get project by ID
+ */
+export const getProjectById = async (id: string) => {
   const project = await prisma.project.findUnique({
     where: { id },
     include: {
       portfolio: {
-        select: {
-          id: true,
-          name: true,
+        include: {
           year: true,
+        },
+      },
+      program: true,
+      tasks: {
+        include: {
+          assignments: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  staffId: true,
+                },
+              },
+            },
+          },
+          _count: {
+            select: {
+              subtasks: true,
+              comments: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
         },
       },
       members: {
@@ -177,41 +218,19 @@ export const getProjectById = async (id: string): Promise<any> => {
               id: true,
               name: true,
               email: true,
+              staffId: true,
               role: true,
             },
           },
           permissions: true,
         },
       },
-      tasks: {
-        where: {
-          parentTaskId: null, // Only top-level tasks
-        },
-        include: {
-          subtasks: {
-            include: {
-              assignments: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      name: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-          assignments: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
-          },
+      _count: {
+        select: {
+          tasks: true,
+          members: true,
+          files: true,
+          comments: true,
         },
       },
     },
@@ -221,16 +240,12 @@ export const getProjectById = async (id: string): Promise<any> => {
     throw new ApiError(HttpStatus.NOT_FOUND, "Project not found");
   }
 
-  // Get related projects
-  const relatedProjects = await getRelatedProjects(id);
-
-  return {
-    ...project,
-    relatedProjects,
-  };
+  return project;
 };
 
-// Update project
+/**
+ * Update project
+ */
 export const updateProject = async (
   id: string,
   data: {
@@ -240,79 +255,363 @@ export const updateProject = async (
     endDate?: Date;
     status?: ProjectStatus;
     portfolioId?: string;
-  }
+    programId?: string | null; // Can be set to null to make it standalone
+  },
+  userId: string,
+  userRole: Role
 ): Promise<Project> => {
   // Check if project exists
   const project = await prisma.project.findUnique({
     where: { id },
+    include: {
+      portfolio: true,
+      program: true,
+    },
   });
 
   if (!project) {
     throw new ApiError(HttpStatus.NOT_FOUND, "Project not found");
   }
 
-  // If updating portfolio, check if portfolio exists
-  if (data.portfolioId && data.portfolioId !== project.portfolioId) {
-    const portfolio = await prisma.portfolio.findUnique({
+  // Only ADMIN can change portfolio or program
+  const isChangingPortfolio =
+    data.portfolioId && data.portfolioId !== project.portfolioId;
+  const isChangingProgram =
+    data.programId !== undefined && data.programId !== project.programId;
+
+  if ((isChangingPortfolio || isChangingProgram) && userRole !== Role.ADMIN) {
+    throw new ApiError(
+      HttpStatus.FORBIDDEN,
+      "Only administrators can move projects between portfolios or programs"
+    );
+  }
+
+  // If changing portfolio, check if target portfolio exists
+  if (isChangingPortfolio) {
+    const targetPortfolio = await prisma.portfolio.findUnique({
       where: { id: data.portfolioId },
     });
 
-    if (!portfolio) {
-      throw new ApiError(HttpStatus.NOT_FOUND, "New portfolio not found");
+    if (!targetPortfolio) {
+      throw new ApiError(HttpStatus.NOT_FOUND, "Target portfolio not found");
+    }
+
+    // If project has a programId or new programId is provided,
+    // ensure program belongs to target portfolio
+    const targetProgramId =
+      data.programId !== undefined ? data.programId : project.programId;
+
+    if (targetProgramId) {
+      const targetProgram = await prisma.program.findUnique({
+        where: { id: targetProgramId },
+      });
+
+      if (!targetProgram) {
+        throw new ApiError(HttpStatus.NOT_FOUND, "Target program not found");
+      }
+
+      if (targetProgram.portfolioId !== data.portfolioId) {
+        throw new ApiError(
+          HttpStatus.BAD_REQUEST,
+          "Program does not belong to the target portfolio. Please set programId to null or choose a program in the target portfolio."
+        );
+      }
     }
   }
 
-  // If updating dates, check they are valid
-  if (data.startDate && data.endDate) {
-    if (new Date(data.startDate) > new Date(data.endDate)) {
-      throw new ApiError(
-        HttpStatus.BAD_REQUEST,
-        "Start date cannot be after end date"
-      );
+  // If changing program, validate it
+  if (isChangingProgram && data.programId !== null) {
+    const targetProgram = await prisma.program.findUnique({
+      where: { id: data.programId },
+    });
+
+    if (!targetProgram) {
+      throw new ApiError(HttpStatus.NOT_FOUND, "Target program not found");
     }
-  } else if (data.startDate && !data.endDate) {
-    if (new Date(data.startDate) > new Date(project.endDate)) {
+
+    // Ensure program belongs to current or target portfolio
+    const targetPortfolioId = data.portfolioId || project.portfolioId;
+    if (targetProgram.portfolioId !== targetPortfolioId) {
       throw new ApiError(
         HttpStatus.BAD_REQUEST,
-        "Start date cannot be after current end date"
-      );
-    }
-  } else if (!data.startDate && data.endDate) {
-    if (new Date(project.startDate) > new Date(data.endDate)) {
-      throw new ApiError(
-        HttpStatus.BAD_REQUEST,
-        "Current start date cannot be after end date"
+        "Program does not belong to the project's portfolio"
       );
     }
   }
 
-  return prisma.project.update({
+  // If updating name, check if new name already exists in the same portfolio
+  if (data.name && data.name !== project.name) {
+    const targetPortfolioId = data.portfolioId || project.portfolioId;
+    const existingProject = await prisma.project.findFirst({
+      where: {
+        name: data.name,
+        portfolioId: targetPortfolioId,
+        id: { not: id },
+      },
+    });
+
+    if (existingProject) {
+      throw new ApiError(
+        HttpStatus.CONFLICT,
+        `Project with name '${data.name}' already exists in this portfolio`
+      );
+    }
+  }
+
+  // Validate dates if both are provided
+  const startDate = data.startDate || project.startDate;
+  const endDate = data.endDate || project.endDate;
+
+  if (new Date(startDate) > new Date(endDate)) {
+    throw new ApiError(
+      HttpStatus.BAD_REQUEST,
+      "Start date must be before end date"
+    );
+  }
+
+  // Build changes object for activity log
+  const changes: any = {};
+  if (data.name && data.name !== project.name) changes.name = data.name;
+  if (data.status && data.status !== project.status)
+    changes.status = data.status;
+  if (isChangingPortfolio) changes.portfolioId = data.portfolioId;
+  if (isChangingProgram) changes.programId = data.programId;
+
+  // Update project
+  const updatedProject = await prisma.project.update({
     where: { id },
     data: {
       name: data.name,
       description: data.description,
-      startDate: data.startDate ? new Date(data.startDate) : undefined,
-      endDate: data.endDate ? new Date(data.endDate) : undefined,
+      startDate: data.startDate,
+      endDate: data.endDate,
       status: data.status,
       portfolioId: data.portfolioId,
+      programId: data.programId,
+    },
+    include: {
+      portfolio: {
+        include: {
+          year: true,
+        },
+      },
+      program: true,
     },
   });
+
+  // Log activity
+  let activityDescription = `Project "${updatedProject.name}" updated`;
+  if (isChangingProgram) {
+    if (data.programId === null) {
+      activityDescription = `Project "${updatedProject.name}" changed to standalone`;
+    } else {
+      activityDescription = `Project "${updatedProject.name}" moved to program`;
+    }
+  }
+
+  await prisma.projectActivity.create({
+    data: {
+      type: ActivityType.PROJECT_UPDATED,
+      description: activityDescription,
+      projectId: updatedProject.id,
+      userId: userId,
+      metadata: changes,
+    },
+  });
+
+  return updatedProject;
 };
 
-// Delete project
+/**
+ * Delete project
+ * Note: This will cascade delete all tasks and related data
+ */
 export const deleteProject = async (id: string): Promise<void> => {
   // Check if project exists
   const project = await prisma.project.findUnique({
     where: { id },
+    include: {
+      _count: {
+        select: {
+          tasks: true,
+        },
+      },
+    },
   });
 
   if (!project) {
     throw new ApiError(HttpStatus.NOT_FOUND, "Project not found");
+  }
+
+  // Warn if project has tasks
+  if (project._count.tasks > 0) {
+    console.warn(
+      `Deleting project "${project.name}" with ${project._count.tasks} tasks`
+    );
   }
 
   await prisma.project.delete({
     where: { id },
   });
+};
+
+/**
+ * Move project to a different program (Admin only)
+ */
+export const moveProjectToProgram = async (
+  projectId: string,
+  targetProgramId: string | null, // null means make it standalone
+  userId: string
+): Promise<Project> => {
+  // Check if project exists
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: {
+      portfolio: true,
+      program: true,
+    },
+  });
+
+  if (!project) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Project not found");
+  }
+
+  // If moving to a program, validate it
+  if (targetProgramId !== null) {
+    const targetProgram = await prisma.program.findUnique({
+      where: { id: targetProgramId },
+    });
+
+    if (!targetProgram) {
+      throw new ApiError(HttpStatus.NOT_FOUND, "Target program not found");
+    }
+
+    // Ensure program belongs to same portfolio
+    if (targetProgram.portfolioId !== project.portfolioId) {
+      throw new ApiError(
+        HttpStatus.BAD_REQUEST,
+        "Cannot move project to a program in a different portfolio. Please move the project to the target portfolio first."
+      );
+    }
+  }
+
+  // Update project
+  const updatedProject = await prisma.project.update({
+    where: { id: projectId },
+    data: { programId: targetProgramId },
+    include: {
+      portfolio: {
+        include: {
+          year: true,
+        },
+      },
+      program: true,
+    },
+  });
+
+  // Log activity
+  let activityDescription;
+  if (targetProgramId === null) {
+    activityDescription = `Project "${project.name}" changed to standalone`;
+  } else {
+    activityDescription = `Project "${project.name}" moved to program "${updatedProject.program?.name}"`;
+  }
+
+  await prisma.projectActivity.create({
+    data: {
+      type: ActivityType.PROJECT_UPDATED,
+      description: activityDescription,
+      projectId: projectId,
+      userId: userId,
+      metadata: {
+        fromProgram: project.program?.name || "standalone",
+        toProgram: updatedProject.program?.name || "standalone",
+      },
+    },
+  });
+
+  return updatedProject;
+};
+
+/**
+ * Move project to a different portfolio (Admin only)
+ * This also removes it from any program
+ */
+export const moveProjectToPortfolio = async (
+  projectId: string,
+  targetPortfolioId: string,
+  userId: string
+): Promise<Project> => {
+  // Check if project exists
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: {
+      portfolio: true,
+      program: true,
+    },
+  });
+
+  if (!project) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Project not found");
+  }
+
+  // Check if target portfolio exists
+  const targetPortfolio = await prisma.portfolio.findUnique({
+    where: { id: targetPortfolioId },
+  });
+
+  if (!targetPortfolio) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Target portfolio not found");
+  }
+
+  // Check if project name already exists in target portfolio
+  const existingProject = await prisma.project.findFirst({
+    where: {
+      name: project.name,
+      portfolioId: targetPortfolioId,
+      id: { not: projectId },
+    },
+  });
+
+  if (existingProject) {
+    throw new ApiError(
+      HttpStatus.CONFLICT,
+      `Project with name '${project.name}' already exists in target portfolio`
+    );
+  }
+
+  // Update project (remove program when changing portfolio)
+  const updatedProject = await prisma.project.update({
+    where: { id: projectId },
+    data: {
+      portfolioId: targetPortfolioId,
+      programId: null, // Remove from program when changing portfolio
+    },
+    include: {
+      portfolio: {
+        include: {
+          year: true,
+        },
+      },
+      program: true,
+    },
+  });
+
+  // Log activity
+  await prisma.projectActivity.create({
+    data: {
+      type: ActivityType.PROJECT_UPDATED,
+      description: `Project "${project.name}" moved to portfolio "${targetPortfolio.name}"`,
+      projectId: projectId,
+      userId: userId,
+      metadata: {
+        fromPortfolio: project.portfolio.name,
+        toPortfolio: targetPortfolio.name,
+      },
+    },
+  });
+
+  return updatedProject;
 };
 
 // Add member to project

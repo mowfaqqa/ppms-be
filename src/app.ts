@@ -9,7 +9,9 @@ import path from "path";
 // Import routes
 import authRoutes from "./routes/auth.routes";
 import userRoutes from "./routes/user.routes";
+import yearRoutes from "./routes/year.routes";
 import portfolioRoutes from "./routes/portfolio.routes";
+import programRoutes from "./routes/program.routes";
 import projectRoutes from "./routes/project.routes";
 import taskRoutes from "./routes/task.routes";
 import taskAssignmentsRoutes from "./routes/task-assignments.routes";
@@ -54,7 +56,9 @@ app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/years", yearRoutes);
 app.use("/api/portfolios", portfolioRoutes);
+app.use("/api/programs", programRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/tasks", taskAssignmentsRoutes);

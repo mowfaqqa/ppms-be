@@ -7,6 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Year {
+  id          String     @id @default(cuid())
+  year        Int        @unique
+  description String?
+  portfolios  Portfolio[]
+  createdAt   DateTime
+  updatedAt   DateTime
+}
 // User model with role-based access
 model User {
   id          String   @id @default(cuid())
@@ -27,6 +35,7 @@ model User {
   tasks                  TaskAssignment[]
   projectComments        ProjectComment[]
   projectActivities      ProjectActivity[]
+  programActivities  ProgramActivity[]
   timeEntries            TimeEntry[]
   acttivity              Activity[]
   taskComments           TaskComment[]
@@ -50,6 +59,7 @@ model User {
 
 enum Role {
   ADMIN
+  PROGRAM_MANAGER
   PROJECT_MANAGER
   TEAM_MEMBER
 }
@@ -58,16 +68,56 @@ enum Role {
 model Portfolio {
   id          String    @id @default(cuid())
   name        String
-  year        Int
+  yearId      String
+  year        Year      @relation(fields: [yearId], references: [id], onDelete: Cascade)
   description String?
+  programs    Program[]
+  projects    Project[]
   startDate   DateTime? // Portfolio start date  
   endDate     DateTime? // Portfolio end date
   status      String? // Portfolio status
-  projects    Project[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-}
 
+  @@map("portfolios")
+}
+model Program {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  status      ProgramStatus @default(PLANNING)
+  
+  // Relationships
+  portfolioId String
+  portfolio   Portfolio         @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  projects    Project[]
+  activities  ProgramActivity[]
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([name, portfolioId]) // Program name must be unique within a portfolio
+  @@map("programs")
+}
+// Program Activity Model
+model ProgramActivity {
+  id          String   @id @default(uuid())
+  type        String 
+  description String
+  metadata    Json?
+  programId   String
+  program     Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  createdAt   DateTime @default(now())
+
+  @@index([programId])
+  @@index([userId])
+  @@map("program_activities")
+}
 // Projects within portfolios
 model Project {
   id           String                @id @default(cuid())
@@ -76,6 +126,8 @@ model Project {
   startDate    DateTime
   endDate      DateTime
   portfolioId  String
+  programId   String? // Nullable - if null, it's a standalone project
+  program     Program? @relation(fields: [programId], references: [id], onDelete: Cascade)
   status       ProjectStatus         @default(PLANNING)
   tasks        Task[]
   members      ProjectMember[]
@@ -100,7 +152,13 @@ enum ProjectStatus {
   COMPLETED
   CANCELLED
 }
-
+enum ProgramStatus {
+  PLANNING
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
 model ProjectRelationship {
   id            String   @id @default(cuid())
   fromProjectId String
@@ -130,6 +188,9 @@ model ProjectMember {
   updatedAt   DateTime          @updatedAt
 
   @@unique([userId, projectId])
+  @@index([projectId])
+  @@index([userId])
+  @@map("project_members")
 }
 
 enum ProjectMemberRole {
@@ -282,7 +343,7 @@ model TaskAssignment {
   @@unique([userId, taskId])
 }
 
-// File uploads with version control
+// File uploads
 model File {
   id            String   @id @default(cuid())
   name          String
@@ -331,7 +392,7 @@ model Notification {
   actorName String? // ✅ NEW: Actor display name
 
   // Priority
-  priority NotificationPriority @default(NORMAL) // ✅ NEW: Priority level
+  priority NotificationPriority @default(MEDIUM) // ✅ NEW: Priority level
 
   // Additional context
   metadata Json? // ✅ NEW: Flexible metadata
@@ -351,7 +412,7 @@ model Notification {
 
 enum NotificationPriority {
   LOW
-  NORMAL
+  MEDIUM
   HIGH
   URGENT
 }
@@ -620,12 +681,14 @@ enum AuditAction {
 // Enum for entity types being audited
 enum EntityType {
   USER
+  YEAR
+  PORTFOLIO
+  PROGRAM
   PROJECT
   TASK
   FILE
   SPRINT
   BACKLOG_ITEM
-  BUDGET
   EXPENSE
   SETTING
   PERMISSION

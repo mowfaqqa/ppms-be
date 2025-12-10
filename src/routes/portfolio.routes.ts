@@ -10,7 +10,11 @@ import {
   updatePortfolio,
   deletePortfolio,
   getPortfolioStats,
+  getPortfolioPrograms,
+  getAllPortfolioProjectsIncludingPrograms,
 } from "../services/portfolio.service";
+import { auditLog } from "../middleware/audit.middleware";
+import { AuditAction, EntityType } from "@prisma/client";
 
 const router = Router();
 
@@ -23,12 +27,17 @@ router.post(
   "/",
   authenticate,
   authorize(["ADMIN"]),
-  [check("name", "Name is required").notEmpty(), validate],
+  [
+    check("name", "Name is required").notEmpty(),
+    check("yearId", "Year ID is required").notEmpty().isUUID(),
+    validate,
+  ],
   asyncHandler(async (req: any, res: any) => {
-    const { name, description, startDate, endDate, status } = req.body;
+    const { name, yearId, description, startDate, endDate, status } = req.body;
 
     const portfolio = await createPortfolio({
       name,
+      yearId,
       description,
       startDate,
       endDate,
@@ -44,14 +53,27 @@ router.post(
 
 /**
  * @route   GET /api/portfolios
- * @desc    Get all portfolios
+ * @desc    Get all portfolios with optional filters
  * @access  Private
  */
 router.get(
   "/",
   authenticate,
+  [
+    check("yearId", "Invalid year ID format").optional().isUUID(),
+    check("search", "Search query must not exceed 100 characters")
+      .optional()
+      .isLength({ max: 100 }),
+    validate,
+  ],
   asyncHandler(async (req: any, res: any) => {
-    const portfolios = await getAllPortfolios();
+    const { yearId, status, search } = req.query;
+
+    const portfolios = await getAllPortfolios({
+      yearId: yearId as string,
+      status: status as string,
+      search: search as string,
+    });
 
     res.status(200).json({
       success: true,
@@ -91,35 +113,47 @@ router.put(
   authorize(["ADMIN"]),
   [
     check("name", "Name must not be empty if provided").optional().notEmpty(),
-    check("year", "Year must be a number if provided").optional().isInt(),
+    check("yearId", "Invalid year ID format").optional().isUUID(),
     validate,
   ],
+  auditLog({
+    action: AuditAction.UPDATED,
+    entityType: EntityType.PORTFOLIO,
+  }),
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
-    const { name, year, description } = req.body;
+    const { name, yearId, description, startDate, endDate, status } = req.body;
 
     const portfolio = await updatePortfolio(id, {
       name,
-      year,
+      yearId,
       description,
+      startDate,
+      endDate,
+      status,
     });
 
     res.status(200).json({
       success: true,
       data: portfolio,
+      message: "Portfolio updated successfully",
     });
   })
 );
 
 /**
  * @route   DELETE /api/portfolios/:id
- * @desc    Delete portfolio
+ * @desc    Delete portfolio (cascades to all programs, projects, tasks)
  * @access  Private/Admin
  */
 router.delete(
   "/:id",
   authenticate,
   authorize(["ADMIN"]),
+  auditLog({
+    action: AuditAction.DELETED,
+    entityType: EntityType.PORTFOLIO,
+  }),
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
@@ -253,5 +287,45 @@ router.get(
     });
   })
 );
+/**
+ * @route   GET /api/portfolios/:id/projects/all
+ * @desc    Get all projects for a portfolio (including those in programs)
+ * @access  Private
+ */
+router.get(
+  "/:id/projects/all",
+  authenticate,
+  asyncHandler(async (req: any, res: any) => {
+    const { id: portfolioId } = req.params;
 
+    const projects = await getAllPortfolioProjectsIncludingPrograms(
+      portfolioId
+    );
+
+    res.status(200).json({
+      success: true,
+      data: projects,
+      message: "All projects including those in programs",
+    });
+  })
+);
+/**
+ * @route   GET /api/portfolios/:id/programs
+ * @desc    Get all programs for a portfolio
+ * @access  Private
+ */
+router.get(
+  "/:id/programs",
+  authenticate,
+  asyncHandler(async (req: any, res: any) => {
+    const { id: portfolioId } = req.params;
+
+    const programs = await getPortfolioPrograms(portfolioId);
+
+    res.status(200).json({
+      success: true,
+      data: programs,
+    });
+  })
+);
 export default router;

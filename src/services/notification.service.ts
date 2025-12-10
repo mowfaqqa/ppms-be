@@ -205,7 +205,7 @@ const createNotification = async (data: {
       actionUrl: data.actionUrl,
       actorId: data.actorId,
       actorName: data.actorName,
-      priority: data.priority || "NORMAL",
+      priority: data.priority || "MEDIUM",
       metadata: data.metadata,
     },
   });
@@ -242,7 +242,7 @@ export const createBulkNotifications = async (
       actionUrl: notif.actionUrl,
       actorId: notif.actorId,
       actorName: notif.actorName,
-      priority: notif.priority || "NORMAL",
+      priority: notif.priority || "MEDIUM",
       metadata: notif.metadata,
     })),
   });
@@ -323,7 +323,7 @@ export const notifyTaskUnassignment = async (
     actionUrl: `/tasks/${taskId}`,
     actorId,
     actorName,
-    priority: "NORMAL",
+    priority: "MEDIUM",
   });
 };
 
@@ -380,7 +380,7 @@ export const notifyDeadlineApproaching = async (
     entityId: taskId,
     entityName: taskTitle,
     actionUrl: `/tasks/${taskId}`,
-    priority: daysLeft <= 1 ? "URGENT" : daysLeft <= 3 ? "HIGH" : "NORMAL",
+    priority: daysLeft <= 1 ? "URGENT" : daysLeft <= 3 ? "HIGH" : "MEDIUM",
     metadata: { daysLeft },
   });
 };
@@ -535,7 +535,7 @@ export const notifyMention = async (
 export const createSystemAnnouncement = async (
   title: string,
   message: string,
-  priority: NotificationPriority = "NORMAL"
+  priority: NotificationPriority = "MEDIUM"
 ) => {
   const activeUsers = await prisma.user.findMany({
     where: { isActive: true },
