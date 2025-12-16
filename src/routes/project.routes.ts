@@ -28,9 +28,51 @@ import {
 import { auditLog } from "../middleware/audit.middleware";
 import { AuditAction, EntityType, ProjectMemberRole } from "@prisma/client";
 import { getRelatedProjectsController } from "../controllers/project_relationship.controller";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import cloudinary from "../config/cloudinary";
+import multer from "multer";
+import prisma from "../config/db";
+import { ApiError, HttpStatus } from "../utils/error.utils";
 
 const router = Router();
 
+// Configure Cloudinary storage
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (_req, file) => {
+    // Determine resource type based on mime type
+    const isImage = file.mimetype.startsWith("image/");
+    // const isPdf = file.mimetype === "application/pdf";
+    // const isDocument =
+    //   file.mimetype.includes("word") ||
+    //   file.mimetype.includes("document") ||
+    //   file.mimetype.includes("spreadsheet") ||
+    //   file.mimetype.includes("excel");
+
+    return {
+      folder: "project-files",
+      resource_type: isImage ? "image" : "raw", // Use "raw" for non-images
+      allowed_formats: [
+        "jpg",
+        "png",
+        "pdf",
+        "doc",
+        "docx",
+        "xls",
+        "xlsx",
+        "txt",
+      ],
+      public_id: `${Date.now()}-${file.originalname.split(".")[0]}`,
+    };
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+});
 /**
  * @route   POST /api/projects
  * @desc    Create a new project
@@ -533,5 +575,187 @@ router.get(
   authenticate,
   checkProjectPermission("project.view"),
   getRelatedProjectsController
+);
+
+/**
+ * @route   GET /api/projects/:projectId/files
+ * @desc    Get all project files
+ * @access  Private
+ */
+router.get(
+  "/:projectId/files",
+  authenticate,
+  checkProjectPermission("project.view"),
+  asyncHandler(async (req: any, res: any) => {
+    const { projectId } = req.params;
+    const { search } = req.query;
+
+    const files = await prisma.projectFile.findMany({
+      where: {
+        projectId,
+        ...(search && {
+          OR: [
+            { originalName: { contains: search, mode: "insensitive" } },
+            { description: { contains: search, mode: "insensitive" } },
+          ],
+        }),
+      },
+      include: {
+        uploadedBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        uploadedAt: "desc",
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      data: files,
+    });
+  })
+);
+
+/**
+ * @route   POST /api/projects/:projectId/files
+ * @desc    Upload files to project (stores in Cloudinary)
+ * @access  Private
+ */
+router.post(
+  "/:projectId/files",
+  authenticate,
+  checkProjectPermission("project.view"),
+  upload.array("files", 10), // Max 10 files at once
+  auditLog({
+    action: AuditAction.UPLOADED,
+    entityType: EntityType.PROJECT,
+  }),
+  asyncHandler(async (req: any, res: any) => {
+    const { projectId } = req.params;
+    const files = req.files as any[];
+
+    if (!files || files.length === 0) {
+      throw new ApiError(HttpStatus.BAD_REQUEST, "No files uploaded");
+    }
+
+    const uploadedFiles = await Promise.all(
+      files.map(async (file) => {
+        return await prisma.projectFile.create({
+          data: {
+            filename: file.filename, // Cloudinary public_id
+            originalName: file.originalname,
+            size: file.size,
+            mimeType: file.mimetype,
+            projectId,
+            uploadedById: req.user!.userId,
+          },
+          include: {
+            uploadedBy: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        });
+      })
+    );
+
+    res.status(201).json({
+      success: true,
+      data: uploadedFiles,
+      message: `${uploadedFiles.length} file(s) uploaded successfully`,
+    });
+  })
+);
+
+/**
+ * @route   GET /api/projects/:projectId/files/:fileId/download
+ * @desc    Get Cloudinary download URL
+ * @access  Private
+ */
+router.get(
+  "/:projectId/files/:fileId/download",
+  authenticate,
+  checkProjectPermission("project.view"),
+  asyncHandler(async (req: any, res: any) => {
+    const { fileId } = req.params;
+
+    const file = await prisma.projectFile.findUnique({
+      where: { id: fileId },
+    });
+
+    if (!file) {
+      throw new ApiError(HttpStatus.NOT_FOUND, "File not found");
+    }
+
+    // Get Cloudinary URL with download flag
+    const resourceType = file.mimeType.startsWith("image/") ? "image" : "raw";
+    const downloadUrl = cloudinary.url(file.filename, {
+      resource_type: resourceType,
+      flags: "attachment:" + file.originalName, // Force download with original name
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        url: downloadUrl,
+        originalName: file.originalName,
+      },
+    });
+  })
+);
+
+/**
+ * @route   DELETE /api/projects/:projectId/files/:fileId
+ * @desc    Delete a project file from Cloudinary
+ * @access  Private
+ */
+router.delete(
+  "/:projectId/files/:fileId",
+  authenticate,
+  checkProjectPermission("project.edit"),
+  auditLog({
+    action: AuditAction.DELETED,
+    entityType: EntityType.FILE,
+  }),
+  asyncHandler(async (req: any, res: any) => {
+    const { fileId } = req.params;
+
+    const file = await prisma.projectFile.findUnique({
+      where: { id: fileId },
+    });
+
+    if (!file) {
+      throw new ApiError(HttpStatus.NOT_FOUND, "File not found");
+    }
+
+    // Delete from Cloudinary
+    const resourceType = file.mimeType.startsWith("image/") ? "image" : "raw";
+    try {
+      await cloudinary.uploader.destroy(file.filename, {
+        resource_type: resourceType,
+      });
+    } catch (error) {
+      console.error("Cloudinary deletion error:", error);
+      // Continue with database deletion even if Cloudinary fails
+    }
+
+    // Delete from database
+    await prisma.projectFile.delete({
+      where: { id: fileId },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "File deleted successfully",
+    });
+  })
 );
 export default router;

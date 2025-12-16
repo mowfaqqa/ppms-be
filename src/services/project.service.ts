@@ -8,8 +8,50 @@ import {
 } from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
 import { notifyProjectAssignment, notifyMention } from "./notification.service";
+import { getRoleDefaultPermissions } from "../utils/helpers";
+import multer from "multer";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import cloudinary from "../config/cloudinary";
 
 const prisma = new PrismaClient();
+
+// Configure Cloudinary storage
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => {
+    // Determine resource type based on mime type
+    const isImage = file.mimetype.startsWith("image/");
+    // const isPdf = file.mimetype === "application/pdf";
+    // const isDocument =
+    //   file.mimetype.includes("word") ||
+    //   file.mimetype.includes("document") ||
+    //   file.mimetype.includes("spreadsheet") ||
+    //   file.mimetype.includes("excel");
+
+    return {
+      folder: "project-files",
+      resource_type: isImage ? "image" : "raw",
+      allowed_formats: [
+        "jpg",
+        "png",
+        "pdf",
+        "doc",
+        "docx",
+        "xls",
+        "xlsx",
+        "txt",
+      ],
+      public_id: `${Date.now()}-${file.originalname.split(".")[0]}`,
+    };
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+});
 
 // Create project
 /**
@@ -24,7 +66,7 @@ export const createProject = async (
     endDate: Date;
     status?: ProjectStatus;
     portfolioId: string;
-    programId?: string | null; 
+    programId?: string | null;
     relatedProjectIds?: string[];
   },
   userId: string
@@ -618,10 +660,32 @@ export const moveProjectToPortfolio = async (
 export const addProjectMember = async (
   projectId: string,
   userId: string,
-  permissionIds: string[],
-  currentUserId?: string,
-  role: ProjectMemberRole = ProjectMemberRole.TEAM_MEMBER
+  permissionIds: string[] | undefined, // Now optional
+  currentUserId: string,
+  role: ProjectMemberRole
 ): Promise<any> => {
+  // Auto-assign permissions based on role if not provided
+  let finalPermissionIds = permissionIds;
+
+  if (!permissionIds || permissionIds.length === 0) {
+    const rolePermissions = await getRoleDefaultPermissions(role);
+    finalPermissionIds = rolePermissions.map((p) => p.id);
+  }
+
+  await prisma.projectMember.create({
+    data: {
+      projectId,
+      userId,
+      role,
+      permissions: {
+        connect: finalPermissionIds.map((id) => ({ id })),
+      },
+    },
+    include: {
+      user: true,
+      permissions: true,
+    },
+  });
   // Check if project exists
   const project = await prisma.project.findUnique({
     where: { id: projectId },
@@ -668,9 +732,9 @@ export const addProjectMember = async (
       "User is already a member of this project"
     );
   }
-
+  console.log(permissionIds);
   // Validate permissions
-  if (permissionIds.length > 0) {
+  if (permissionIds?.length > 0) {
     const permissions = await prisma.permission.findMany({
       where: {
         id: {

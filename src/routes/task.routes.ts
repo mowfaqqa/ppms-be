@@ -146,7 +146,7 @@ router.get(
  * @desc    Update task
  * @access  Private
  */
-router.put(
+router.patch(
   "/:id",
   authenticate,
   checkTaskPermission("task.edit"),

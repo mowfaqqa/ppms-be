@@ -44,7 +44,7 @@ if (!fs.existsSync(logsDir)) {
 }
 const corsOptions = {
   origin: ["http://localhost:3000", "https://ppms-smoky.vercel.app"],
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  methods: ["GET", "POST", "PUT", "PATCH","DELETE"],
   credentials: true, // for cookies, authorization headers, etc.
 };
 // Middleware
