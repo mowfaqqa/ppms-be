@@ -660,33 +660,11 @@ export const moveProjectToPortfolio = async (
 export const addProjectMember = async (
   projectId: string,
   userId: string,
-  permissionIds: string[] | undefined, // Now optional
+  permissionIds: string[] | undefined,
   currentUserId: string,
   role: ProjectMemberRole
 ): Promise<any> => {
-  // Auto-assign permissions based on role if not provided
-  let finalPermissionIds = permissionIds;
-
-  if (!permissionIds || permissionIds.length === 0) {
-    const rolePermissions = await getRoleDefaultPermissions(role);
-    finalPermissionIds = rolePermissions.map((p) => p.id);
-  }
-
-  await prisma.projectMember.create({
-    data: {
-      projectId,
-      userId,
-      role,
-      permissions: {
-        connect: finalPermissionIds.map((id) => ({ id })),
-      },
-    },
-    include: {
-      user: true,
-      permissions: true,
-    },
-  });
-  // Check if project exists
+  // 1. CHECK IF PROJECT EXISTS
   const project = await prisma.project.findUnique({
     where: { id: projectId },
   });
@@ -695,7 +673,7 @@ export const addProjectMember = async (
     throw new ApiError(HttpStatus.NOT_FOUND, "Project not found");
   }
 
-  // Check if user exists
+  // 2. CHECK IF USER EXISTS
   const user = await prisma.user.findUnique({
     where: { id: userId },
   });
@@ -703,20 +681,8 @@ export const addProjectMember = async (
   if (!user) {
     throw new ApiError(HttpStatus.NOT_FOUND, "User not found");
   }
-  // Check if user is already assigned to 3 or more projects
-  const userProjectCount = await prisma.projectMember.count({
-    where: {
-      userId: userId,
-    },
-  });
 
-  if (userProjectCount >= 3) {
-    throw new ApiError(
-      HttpStatus.BAD_REQUEST,
-      "User cannot be added to more than 3 projects"
-    );
-  }
-  // Check if user is already a member
+  // 3. CHECK IF USER IS ALREADY A MEMBER
   const existingMember = await prisma.projectMember.findUnique({
     where: {
       userId_projectId: {
@@ -732,29 +698,52 @@ export const addProjectMember = async (
       "User is already a member of this project"
     );
   }
-  console.log(permissionIds);
-  // Validate permissions
-  if (permissionIds?.length > 0) {
+
+  // 4. CHECK IF USER IS ALREADY ASSIGNED TO 3 OR MORE PROJECTS
+  const userProjectCount = await prisma.projectMember.count({
+    where: {
+      userId: userId,
+    },
+  });
+
+  if (userProjectCount >= 3) {
+    throw new ApiError(
+      HttpStatus.BAD_REQUEST,
+      "User cannot be added to more than 3 projects"
+    );
+  }
+
+  // 5. AUTO-ASSIGN PERMISSIONS BASED ON ROLE IF NOT PROVIDED
+  let finalPermissionIds = permissionIds;
+
+  if (!permissionIds || permissionIds.length === 0) {
+    const rolePermissions = await getRoleDefaultPermissions(role);
+    finalPermissionIds = rolePermissions.map((p) => p.id);
+  }
+
+  // 6. VALIDATE PERMISSIONS IF PROVIDED
+  if (finalPermissionIds && finalPermissionIds.length > 0) {
     const permissions = await prisma.permission.findMany({
       where: {
         id: {
-          in: permissionIds,
+          in: finalPermissionIds,
         },
       },
     });
 
-    if (permissions.length !== permissionIds.length) {
+    if (permissions.length !== finalPermissionIds.length) {
       throw new ApiError(HttpStatus.BAD_REQUEST, "Invalid permission IDs");
     }
   }
 
+  // 7. CREATE PROJECT MEMBER (ONLY ONCE!)
   const result = await prisma.projectMember.create({
     data: {
       userId,
       projectId,
       role,
       permissions: {
-        connect: permissionIds.map((id) => ({ id })),
+        connect: finalPermissionIds?.map((id) => ({ id })) || [],
       },
     },
     include: {
@@ -769,8 +758,10 @@ export const addProjectMember = async (
       permissions: true,
     },
   });
+
+  // 8. SEND NOTIFICATION
   try {
-    const actorId = currentUserId || userId; // Use currentUserId if provided, fallback to userId
+    const actorId = currentUserId || userId;
     const currentUser = await prisma.user.findUnique({
       where: { id: actorId },
     });
