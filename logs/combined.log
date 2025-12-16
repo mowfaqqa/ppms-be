@@ -889,3 +889,17 @@
 {"level":"info","message":"Shutting down gracefully...","timestamp":"2025-12-16T08:06:50.583Z"}
 {"level":"info","message":"Shutting down gracefully...","timestamp":"2025-12-16T08:06:51.131Z"}
 {"level":"info","message":"Disconnected from database","timestamp":"2025-12-16T08:06:51.230Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-16T08:14:39.074Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-16T08:14:40.297Z"}
+{"level":"info","message":"Server is running on port 4400","timestamp":"2025-12-16T08:14:40.310Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-16T08:20:07.395Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-16T08:20:07.808Z"}
+{"level":"info","message":"Server is running on port 4400","timestamp":"2025-12-16T08:20:07.811Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-16T08:24:33.758Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-16T08:24:34.013Z"}
+{"level":"info","message":"Server is running on port 4400","timestamp":"2025-12-16T08:24:34.017Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-16T08:28:33.510Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-16T08:28:33.735Z"}
+{"level":"info","message":"Server is running on port 4400","timestamp":"2025-12-16T08:28:33.738Z"}
+{"level":"info","message":"Shutting down gracefully...","timestamp":"2025-12-16T08:29:23.727Z"}
+{"level":"info","message":"Disconnected from database","timestamp":"2025-12-16T08:29:23.740Z"}

@@ -112,16 +112,16 @@ export const createUser = async (
   });
 
   // Send welcome email with temporary password
-  try {
-    await sendUserCreatedEmail(
-      result.user.email,
-      result.user.name,
-      result.temporaryPassword
-    );
-  } catch (error) {
-    console.error("Failed to send user creation email:", error);
-    // Don't fail the entire operation if email fails
-  }
+  // try {
+  //   await sendUserCreatedEmail(
+  //     result.user.email,
+  //     result.user.name,
+  //     result.temporaryPassword
+  //   );
+  // } catch (error) {
+  //   console.error("Failed to send user creation email:", error);
+  //   // Don't fail the entire operation if email fails
+  // }
 
   return result.user;
 };
