@@ -160,7 +160,12 @@ export const createProject = async (
 /**
  * Get all projects with optional filters
  */
-export const getAllProjects = async (filters?: {
+export const getAllProjects = async (
+  user: {
+    role: Role;
+    userId: string;
+  },
+  filters?: {
   portfolioId?: string;
   programId?: string;
   status?: ProjectStatus;
@@ -193,6 +198,15 @@ export const getAllProjects = async (filters?: {
     ];
   }
 
+  if (user.role === "PROJECT_MANAGER") {
+    where.members = {
+      some: {
+        userId: user.userId,
+        role: "PROJECT_MANAGER",
+      },
+    };
+  }
+
   return prisma.project.findMany({
     where,
     include: {
@@ -218,7 +232,30 @@ export const getAllProjects = async (filters?: {
 /**
  * Get project by ID
  */
-export const getProjectById = async (id: string) => {
+export const getProjectById = async (
+  id: string,
+  user: {
+    role: Role;
+    userId: string;
+  },
+) => {
+  if(user.role === "PROJECT_MANAGER") {
+    const projectManagerIsMember = await prisma.projectMember.findFirst({
+      where: {
+        id,
+        userId: user.userId,
+      },
+    });
+  
+    if (!projectManagerIsMember) {
+      throw new ApiError(
+        HttpStatus.FORBIDDEN,
+        "You are not a member of this project"
+      );
+    }
+    return;
+  }
+
   const project = await prisma.project.findUnique({
     where: { id },
     include: {
@@ -662,8 +699,27 @@ export const addProjectMember = async (
   userId: string,
   permissionIds: string[] | undefined,
   currentUserId: string,
-  role: ProjectMemberRole
+  role: ProjectMemberRole,
+  currentUserRole?: string
 ): Promise<any> => {
+  // check if project manager is assigned to project before he can add members
+  if(currentUserRole === "PROJECT_MANAGER") {
+    const projectManagerIsMember = await prisma.projectMember.findFirst({
+      where: {
+        projectId,
+        userId: currentUserId,
+      },
+    });
+  
+    if (!projectManagerIsMember) {
+      throw new ApiError(
+        HttpStatus.FORBIDDEN,
+        "You are not a member of this project"
+      );
+    }
+    return;
+  }
+
   // 1. CHECK IF PROJECT EXISTS
   const project = await prisma.project.findUnique({
     where: { id: projectId },
@@ -785,8 +841,30 @@ export const updateProjectMemberPermissions = async (
   projectId: string,
   userId: string,
   permissionIds: string[],
-  role?: ProjectMemberRole
+  role?: ProjectMemberRole,
+  user?: {
+    role: Role;
+    userId: string;
+  },
 ): Promise<any> => {
+   // check if project manager is assigned to project before he can add members
+   if(user.role === "PROJECT_MANAGER") {
+    const projectManagerIsMember = await prisma.projectMember.findFirst({
+      where: {
+        projectId,
+        userId: user.userId,
+      },
+    });
+  
+    if (!projectManagerIsMember) {
+      throw new ApiError(
+        HttpStatus.FORBIDDEN,
+        "You are not a member of this project"
+      );
+    }
+    return;
+  }
+
   // Check if project member exists
   const projectMember = await prisma.projectMember.findUnique({
     where: {
@@ -1206,8 +1284,27 @@ export const updateProjectMemberRole = async (
   projectId: string,
   userId: string,
   role: ProjectMemberRole,
-  updatedById: string
+  updatedById: string,
+  updatedByRole?: string
 ): Promise<any> => {
+   // check if project manager is assigned to project before he can add members
+   if(updatedByRole === "PROJECT_MANAGER") {
+    const projectManagerIsMember = await prisma.projectMember.findFirst({
+      where: {
+        projectId,
+        userId: updatedById,
+      },
+    });
+  
+    if (!projectManagerIsMember) {
+      throw new ApiError(
+        HttpStatus.FORBIDDEN,
+        "You are not a member of this project"
+      );
+    }
+    return;
+  }
+
   // Check if project member exists
   const projectMember = await prisma.projectMember.findUnique({
     where: { userId_projectId: { userId, projectId } },
@@ -1252,8 +1349,23 @@ export const updateProjectMemberRole = async (
 // Update existing removeProjectMember to add activity logging
 export const removeProjectMember = async (
   projectId: string,
-  memberId: string
+  memberId: string,
+  userId?: string
 ): Promise<void> => {
+   // check if project manager is assigned to project before he can add members
+   const projectManagerIsMember = await prisma.projectMember.findFirst({
+    where: {
+      projectId,
+      userId,
+    },
+  });
+
+  if (!projectManagerIsMember) {
+    throw new ApiError(
+      HttpStatus.FORBIDDEN,
+      "You are not a member of this project"
+    );
+  }
   // Check if project member exists
   const projectMember = await prisma.projectMember.findUnique({
     where: { id: memberId },

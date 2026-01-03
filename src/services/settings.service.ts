@@ -431,6 +431,7 @@ export const updateUserSettings = async (
         joiningDate: true,
         createdAt: true,
         updatedAt: true,
+        managedPortfolios: true
       },
     });
 

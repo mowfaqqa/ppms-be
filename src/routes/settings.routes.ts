@@ -195,7 +195,7 @@ router.put(
       .isLength({ max: 100 }),
     check("role", "Role must be ADMIN, PROJECT_MANAGER, or TEAM_MEMBER")
       .optional()
-      .isIn(["ADMIN", "PROJECT_MANAGER", "TEAM_MEMBER"]),
+      .isIn(["ADMIN", "PROJECT_MANAGER", "TEAM_MEMBER", "PROGRAM_MANAGER"]),
     validate,
   ],
   asyncHandler(async (req: any, res: any) => {

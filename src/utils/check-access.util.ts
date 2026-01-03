@@ -25,8 +25,26 @@ export const getPortfolioScope = (user: {
 }) => {
   if (user.role === "PROGRAM_MANAGER") {
     return {
-      managers: {
+      programManagers: {
         some: { id: user.userId },
+      },
+    };
+  }
+
+  // ADMIN has complete access
+  return {};
+};
+
+export const getNestedPortfolioScope = (user: {
+  role: Role;
+  userId: string;
+}) => {
+  if (user.role === "PROGRAM_MANAGER") {
+    return {
+      portfolio: {
+        programManagers: {
+          some: { id: user.userId },
+        },
       },
     };
   }

@@ -9,7 +9,7 @@ import {
   getActivityStats,
   getRecentActivitySummary,
 } from "../services/dashboard-activity.service";
-import { getPortfolioScope } from "../utils/check-access.util";
+import { getPortfolioScope, getNestedPortfolioScope } from "../utils/check-access.util";
 
 const router = Router();
 
@@ -31,10 +31,11 @@ router.get(
     let dashboardDTO = {};
 
     const portfolioScope = getPortfolioScope(req.user);
+    const nestedPortfolioScope = getNestedPortfolioScope(req.user);
 
     try {
       // Admin DTO
-      if(userRoles === "ADMIN") {
+      if(userRoles === "ADMIN" || userRoles === "PROGRAM_MANAGER") {
         // Get all portfolios count, active and ended
         const [activePortfolios, endedPortfolios, totalPortfolios] = await Promise.all([
           prisma.portfolio.count({
@@ -57,30 +58,35 @@ router.get(
   
         // Get project counts
         const totalProjects = await prisma.project.count({
-          where: portfolioScope
+          where: {
+            ...nestedPortfolioScope,
+            programId: {
+              not: null
+            }
+          }
         });
         const activeProjects = await prisma.project.count({
           where: {
-            ...portfolioScope,
+            ...nestedPortfolioScope,
             status: { in: ["PLANNING", "IN_PROGRESS"] },
           },
         });
         const completedProjects = await prisma.project.count({
           where: { 
-            ...portfolioScope,
+            ...nestedPortfolioScope,
             status: "COMPLETED" 
           },
         });
   
         // Get program count
         const totalPrograms = await prisma.program.count({
-          where: portfolioScope
+          where: nestedPortfolioScope
         });
   
         //Get standalone projects
         const totalStandaloneProjects = await prisma.project.count({
           where: {
-            ...portfolioScope,
+            ...nestedPortfolioScope,
             programId: null
           }
         });
@@ -114,8 +120,6 @@ router.get(
             totalProjects: 0,
             totalTasks: 0,
             totalFiles: 0,
-            totalSprints: 0,
-            totalBacklogItems: 0,
           };
         }
 

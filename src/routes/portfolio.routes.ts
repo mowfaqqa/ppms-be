@@ -26,7 +26,7 @@ const router = Router();
 router.post(
   "/",
   authenticate,
-  authorize(["ADMIN"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER"]),
   [
     check("name", "Name is required").notEmpty(),
     check("yearId", "Year ID is required").notEmpty(),

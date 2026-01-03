@@ -7,6 +7,7 @@ import {
   getRelatedProjects,
 } from "../services/project.service";
 import { ApiError, HttpStatus } from "../utils/error.utils";
+import { Role } from "@prisma/client";
 
 /**
  * POST /api/projects/:projectId/related
@@ -162,7 +163,13 @@ export const getProjectByIdController = async (
 ) => {
   try {
     const { id } = req.params;
-    const project = await getProjectById(id);
+    const project = await getProjectById(
+      id,
+      {
+        role: req.user.role as Role,
+        userId: req.user.userId
+      }
+    );
 
     res.status(HttpStatus.OK).json({
       success: true,
