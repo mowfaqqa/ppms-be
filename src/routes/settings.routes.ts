@@ -58,7 +58,7 @@ router.post(
     validate,
   ],
   asyncHandler(async (req: any, res: any) => {
-    const { name, email, staffId, department, phoneNumber, position, role } =
+    const { name, email, staffId, department, phoneNumber, position, role, portfolioIds } =
       req.body;
 
     const ipAddress = req.ip || req.connection.remoteAddress;
@@ -73,6 +73,7 @@ router.post(
         phoneNumber: phoneNumber?.trim(),
         position: position?.trim(),
         role: role as Role,
+        portfolioIds: Array.isArray(portfolioIds) ? portfolioIds : [],
       },
       req.user!.userId,
       ipAddress,
@@ -199,7 +200,7 @@ router.put(
   ],
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
-    const { name, email, staffId, department, phoneNumber, position, role } =
+    const { name, email, staffId, department, phoneNumber, position, role, portfolioIds } =
       req.body;
 
     const ipAddress = req.ip || req.connection.remoteAddress;
@@ -215,6 +216,7 @@ router.put(
         phoneNumber: phoneNumber?.trim(),
         position: position?.trim(),
         role: role as Role,
+        portfolioIds: Array.isArray(portfolioIds) ? portfolioIds : [],
       },
       req.user!.userId,
       ipAddress,

@@ -69,10 +69,13 @@ router.get(
   asyncHandler(async (req: any, res: any) => {
     const { yearId, status, search } = req.query;
 
-    const portfolios = await getAllPortfolios({
-      yearId: yearId as string,
-      status: status as string,
-      search: search as string,
+    const portfolios = await getAllPortfolios(
+      req.user.userId, 
+      req.user.role, 
+      {
+        yearId: yearId as string,
+        status: status as string,
+        search: search as string,
     });
 
     res.status(200).json({
@@ -93,7 +96,11 @@ router.get(
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
-    const portfolio = await getPortfolioById(id);
+    const portfolio = await getPortfolioById(
+      id,
+      req.user.role,
+      req.user.userId
+    );
 
     res.status(200).json({
       success: true,
@@ -105,12 +112,12 @@ router.get(
 /**
  * @route   PUT /api/portfolios/:id
  * @desc    Update portfolio
- * @access  Private/Admin
+ * @access  Private/Admin/Program Manager
  */
 router.put(
   "/:id",
   authenticate,
-  authorize(["ADMIN"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER"]),
   [
     check("name", "Name must not be empty if provided").optional().notEmpty(),
     check("yearId", "Invalid year ID format").optional(),
@@ -124,14 +131,19 @@ router.put(
     const { id } = req.params;
     const { name, yearId, description, startDate, endDate, status } = req.body;
 
-    const portfolio = await updatePortfolio(id, {
-      name,
-      yearId,
-      description,
-      startDate,
-      endDate,
-      status,
-    });
+    const portfolio = await updatePortfolio(
+      id,
+      {
+        name,
+        yearId,
+        description,
+        startDate,
+        endDate,
+        status,
+      },
+      req.user.role,
+      req.user.userId,
+    );
 
     res.status(200).json({
       success: true,
@@ -149,7 +161,7 @@ router.put(
 router.delete(
   "/:id",
   authenticate,
-  authorize(["ADMIN"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER"]),
   auditLog({
     action: AuditAction.DELETED,
     entityType: EntityType.PORTFOLIO,
@@ -157,7 +169,12 @@ router.delete(
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
-    await deletePortfolio(id);
+    await deletePortfolio(
+      id,
+      req.user.role,
+      req.user.userId,
+    );
+    
 
     res.status(200).json({
       success: true,
@@ -177,7 +194,11 @@ router.get(
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
-    const stats = await getPortfolioStats(id);
+    const stats = await getPortfolioStats(
+      id,
+      req.user.role,
+      req.user.userId,
+    );
 
     res.status(200).json({
       success: true,
@@ -200,8 +221,12 @@ router.get(
     const prisma = new PrismaClient();
 
     // Get basic stats
-    const stats = await getPortfolioStats(id);
-
+    const stats = await getPortfolioStats(
+      id,
+      req.user.role,
+      req.user.userId,
+    );
+    
     // Get additional portfolio data for detailed analytics
     const portfolio = await prisma.portfolio.findUnique({
       where: { id },
@@ -279,7 +304,11 @@ router.get(
     const { getAllPortfolioProjects } = await import(
       "../services/portfolio.service"
     );
-    const projects = await getAllPortfolioProjects(portfolioId);
+    const projects = await getAllPortfolioProjects(
+      portfolioId,
+      req.user.role,
+      req.user.userId,
+    );
 
     res.status(200).json({
       success: true,
@@ -299,7 +328,9 @@ router.get(
     const { id: portfolioId } = req.params;
 
     const projects = await getAllPortfolioProjectsIncludingPrograms(
-      portfolioId
+      portfolioId,
+      req.user.role,
+      req.user.userId,
     );
 
     res.status(200).json({
@@ -320,7 +351,11 @@ router.get(
   asyncHandler(async (req: any, res: any) => {
     const { id: portfolioId } = req.params;
 
-    const programs = await getPortfolioPrograms(portfolioId);
+    const programs = await getPortfolioPrograms(
+      portfolioId,
+      req.user.role,
+      req.user.userId
+    );
 
     res.status(200).json({
       success: true,

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { PrismaClient } from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
-
+import { programManagerHasPortfolioAccess } from "../utils/check-access.util";
 const prisma = new PrismaClient();
 
 // Check project permission middleware
@@ -21,6 +21,25 @@ export const checkProjectPermission = (permission: string) => {
 
       if (!projectId) {
         throw new ApiError(HttpStatus.BAD_REQUEST, "Project ID is required");
+      }
+
+      // check if user(proram manager) is assigned a portfolio 
+      if (req.user.role === "PROGRAM_MANAGER") {
+        const projectPortfolioId = await getProjectPortfolioId(projectId);
+
+        const hasAccess = await programManagerHasPortfolioAccess(
+          req.user.userId,
+          projectPortfolioId
+        );
+
+        if (!hasAccess) {
+          throw new ApiError(
+            HttpStatus.FORBIDDEN,
+            "You don't have access to this portfolio"
+          );
+        }
+     
+        return next();
       }
 
       // Check if user is member of the project with required permission
@@ -155,4 +174,18 @@ export const checkAssignmentLimit = async (
   } catch (error) {
     next(error);
   }
+};
+
+// check if portfolio assigned to program manager exists
+const getProjectPortfolioId = async (projectId: string) => {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { portfolioId: true },
+  });
+
+  if (!project) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Project not found");
+  }
+
+  return project.portfolioId;
 };

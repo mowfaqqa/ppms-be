@@ -903,3 +903,297 @@
 {"level":"info","message":"Server is running on port 4400","timestamp":"2025-12-16T08:28:33.738Z"}
 {"level":"info","message":"Shutting down gracefully...","timestamp":"2025-12-16T08:29:23.727Z"}
 {"level":"info","message":"Disconnected from database","timestamp":"2025-12-16T08:29:23.740Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-22T11:18:50.836Z"}
+{"clientVersion":"6.9.0","errorCode":"P1012","level":"error","message":"Error starting server: \u001b[1;91merror\u001b[0m: \u001b[1mEnvironment variable not found: DATABASE_URL.\u001b[0m\n  \u001b[1;94m-->\u001b[0m  \u001b[4mschema.prisma:7\u001b[0m\n\u001b[1;94m   | \u001b[0m\n\u001b[1;94m 6 | \u001b[0m  provider = \"postgresql\"\n\u001b[1;94m 7 | \u001b[0m  url      = \u001b[1;91menv(\"DATABASE_URL\")\u001b[0m\n\u001b[1;94m   | \u001b[0m\n\nValidation Error Count: 1","name":"PrismaClientInitializationError","stack":"PrismaClientInitializationError: \u001b[1;91merror\u001b[0m: \u001b[1mEnvironment variable not found: DATABASE_URL.\u001b[0m\n  \u001b[1;94m-->\u001b[0m  \u001b[4mschema.prisma:7\u001b[0m\n\u001b[1;94m   | \u001b[0m\n\u001b[1;94m 6 | \u001b[0m  provider = \"postgresql\"\n\u001b[1;94m 7 | \u001b[0m  url      = \u001b[1;91menv(\"DATABASE_URL\")\u001b[0m\n\u001b[1;94m   | \u001b[0m\n\nValidation Error Count: 1\n    at r (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:112:2565)","timestamp":"2025-12-22T11:18:51.470Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-22T11:25:52.044Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-22T11:25:52.405Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-22T11:25:52.408Z"}
+{"level":"error","message":"ApiError: Invalid or expired token","method":"GET","path":"/api/settings/departments","stack":"ApiError: Invalid or expired token\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:66:12\n    at Generator.next (<anonymous>)\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:8:71\n    at new Promise (<anonymous>)\n    at __awaiter (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:4:12)\n    at authenticate (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:25:5)\n    at Layer.handleRequest (/home/zangetsu/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at next (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:157:13)\n    at Route.dispatch (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:117:3)\n    at handle (/home/zangetsu/ppms-be/node_modules/router/index.js:435:11)","timestamp":"2025-12-22T11:52:40.966Z"}
+{"level":"error","message":"ApiError: Invalid or expired token","method":"GET","path":"/api/settings/users","stack":"ApiError: Invalid or expired token\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:66:12\n    at Generator.next (<anonymous>)\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:8:71\n    at new Promise (<anonymous>)\n    at __awaiter (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:4:12)\n    at authenticate (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:25:5)\n    at Layer.handleRequest (/home/zangetsu/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at next (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:157:13)\n    at Route.dispatch (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:117:3)\n    at handle (/home/zangetsu/ppms-be/node_modules/router/index.js:435:11)","timestamp":"2025-12-22T11:52:41.008Z"}
+{"level":"error","message":"ApiError: Authorization token is required","method":"GET","path":"/api/settings/departments","stack":"ApiError: Authorization token is required\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:30:13\n    at Generator.next (<anonymous>)\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:8:71\n    at new Promise (<anonymous>)\n    at __awaiter (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:4:12)\n    at authenticate (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:25:5)\n    at Layer.handleRequest (/home/zangetsu/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at next (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:157:13)\n    at Route.dispatch (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:117:3)\n    at handle (/home/zangetsu/ppms-be/node_modules/router/index.js:435:11)","timestamp":"2025-12-22T11:52:42.179Z"}
+{"level":"error","message":"ApiError: Authorization token is required","method":"GET","path":"/api/settings/users","stack":"ApiError: Authorization token is required\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:30:13\n    at Generator.next (<anonymous>)\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:8:71\n    at new Promise (<anonymous>)\n    at __awaiter (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:4:12)\n    at authenticate (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:25:5)\n    at Layer.handleRequest (/home/zangetsu/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at next (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:157:13)\n    at Route.dispatch (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:117:3)\n    at handle (/home/zangetsu/ppms-be/node_modules/router/index.js:435:11)","timestamp":"2025-12-22T11:52:42.241Z"}
+{"level":"info","message":"Shutting down gracefully...","timestamp":"2025-12-22T12:00:39.210Z"}
+{"level":"info","message":"Disconnected from database","timestamp":"2025-12-22T12:00:39.217Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-22T12:00:58.642Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-22T12:00:58.963Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-22T12:00:58.966Z"}
+{"level":"error","message":"ApiError: Not found - /api/auth/register","method":"GET","path":"/api/auth/register","stack":"ApiError: Not found - /api/auth/register\n    at notFound (/home/zangetsu/ppms-be/src/middleware/error.middleware.ts:57:17)\n    at Layer.handleRequest (/home/zangetsu/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at trimPrefix (/home/zangetsu/ppms-be/node_modules/router/index.js:342:13)\n    at /home/zangetsu/ppms-be/node_modules/router/index.js:297:9\n    at processParams (/home/zangetsu/ppms-be/node_modules/router/index.js:582:12)\n    at next (/home/zangetsu/ppms-be/node_modules/router/index.js:291:5)\n    at /home/zangetsu/ppms-be/node_modules/router/index.js:688:15\n    at next (/home/zangetsu/ppms-be/node_modules/router/index.js:276:14)\n    at Function.handle (/home/zangetsu/ppms-be/node_modules/router/index.js:186:3)\n    at router (/home/zangetsu/ppms-be/node_modules/router/index.js:60:12)","timestamp":"2025-12-22T12:03:01.800Z"}
+{"level":"error","message":"PrismaClientKnownRequestError: \nInvalid `prisma.user.findUnique()` invocation in\n/home/zangetsu/ppms-be/src/services/auth.service.ts:16:42\n\n  13   role: Role = \"TEAM_MEMBER\"\n  14 ): Promise<{ user: User; token: string }> => {\n  15   // Check if user already exists\n→ 16   const existingUser = await prisma.user.findUnique(\nThe table `public.User` does not exist in the current database.","method":"POST","path":"/api/auth/register","stack":"PrismaClientKnownRequestError: \nInvalid `prisma.user.findUnique()` invocation in\n/home/zangetsu/ppms-be/src/services/auth.service.ts:16:42\n\n  13   role: Role = \"TEAM_MEMBER\"\n  14 ): Promise<{ user: User; token: string }> => {\n  15   // Check if user already exists\n→ 16   const existingUser = await prisma.user.findUnique(\nThe table `public.User` does not exist in the current database.\n    at Zn.handleRequestError (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:121:7459)\n    at Zn.handleAndLogRequestError (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:130:9778)","timestamp":"2025-12-22T12:03:17.494Z"}
+{"level":"info","message":"Shutting down gracefully...","timestamp":"2025-12-22T12:05:01.383Z"}
+{"level":"info","message":"Disconnected from database","timestamp":"2025-12-22T12:05:01.391Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-22T12:06:45.254Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-22T12:06:45.521Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-22T12:06:45.523Z"}
+{"level":"info","message":"Shutting down gracefully...","timestamp":"2025-12-22T16:02:34.371Z"}
+{"level":"info","message":"Disconnected from database","timestamp":"2025-12-22T16:02:34.385Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-22T17:47:55.232Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-22T17:47:56.309Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-22T17:47:56.313Z"}
+{"level":"error","message":"ApiError: User already exists","method":"POST","path":"/api/auth/register","stack":"ApiError: User already exists\n    at /home/zangetsu/ppms-be/src/services/auth.service.ts:21:11\n    at Generator.next (<anonymous>)\n    at fulfilled (/home/zangetsu/ppms-be/src/services/auth.service.ts:5:58)","timestamp":"2025-12-22T17:54:26.951Z"}
+{"level":"error","message":"SyntaxError: Expected double-quoted property name in JSON at position 207 (line 9 column 1)","method":"POST","path":"/api/settings/users","stack":"SyntaxError: Expected double-quoted property name in JSON at position 207 (line 9 column 1)\n    at JSON.parse (<anonymous>)\n    at parse (/home/zangetsu/ppms-be/node_modules/body-parser/lib/types/json.js:77:19)\n    at /home/zangetsu/ppms-be/node_modules/body-parser/lib/read.js:123:18\n    at AsyncResource.runInAsyncScope (node:async_hooks:214:14)\n    at invokeCallback (/home/zangetsu/ppms-be/node_modules/raw-body/index.js:238:16)\n    at done (/home/zangetsu/ppms-be/node_modules/raw-body/index.js:227:7)\n    at IncomingMessage.onEnd (/home/zangetsu/ppms-be/node_modules/raw-body/index.js:287:7)\n    at IncomingMessage.emit (node:events:518:28)\n    at IncomingMessage.emit (node:domain:489:12)\n    at endReadableNT (node:internal/streams/readable:1698:12)","timestamp":"2025-12-22T18:07:56.029Z"}
+{"level":"error","message":"ApiError: Authorization token is required","method":"POST","path":"/api/settings/users","stack":"ApiError: Authorization token is required\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:30:13\n    at Generator.next (<anonymous>)\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:8:71\n    at new Promise (<anonymous>)\n    at __awaiter (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:4:12)\n    at authenticate (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:25:5)\n    at Layer.handleRequest (/home/zangetsu/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at next (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:157:13)\n    at Route.dispatch (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:117:3)\n    at handle (/home/zangetsu/ppms-be/node_modules/router/index.js:435:11)","timestamp":"2025-12-22T18:08:02.111Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-22T18:10:14.401Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-22T18:10:14.689Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-22T18:10:14.693Z"}
+{"level":"error","message":"ApiError: Authorization token is required","method":"POST","path":"/api/settings/users","stack":"ApiError: Authorization token is required\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:30:13\n    at Generator.next (<anonymous>)\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:8:71\n    at new Promise (<anonymous>)\n    at __awaiter (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:4:12)\n    at authenticate (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:25:5)\n    at Layer.handleRequest (/home/zangetsu/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at next (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:157:13)\n    at Route.dispatch (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:117:3)\n    at handle (/home/zangetsu/ppms-be/node_modules/router/index.js:435:11)","timestamp":"2025-12-22T18:16:03.547Z"}
+{"level":"error","message":"ApiError: User already exists","method":"POST","path":"/api/auth/register","stack":"ApiError: User already exists\n    at /home/zangetsu/ppms-be/src/services/auth.service.ts:21:11\n    at Generator.next (<anonymous>)\n    at fulfilled (/home/zangetsu/ppms-be/src/services/auth.service.ts:5:58)","timestamp":"2025-12-22T18:17:23.174Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-22T18:36:03.916Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-22T18:36:04.199Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-22T18:36:04.202Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-22T18:37:08.801Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-22T18:37:09.256Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-22T18:37:09.260Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-22T18:39:00.944Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-22T18:39:01.604Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-22T18:39:01.612Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T05:53:18.534Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T05:53:18.820Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T05:53:18.823Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T05:54:33.879Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T05:54:34.179Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T05:54:34.183Z"}
+{"level":"info","message":"it gets here","timestamp":"2025-12-23T05:54:50.028Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T05:55:55.086Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T05:55:55.333Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T05:55:55.335Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T05:58:29.115Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T05:58:29.403Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T05:58:29.406Z"}
+{"level":"info","message":"undefined","timestamp":"2025-12-23T05:58:40.124Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T05:59:43.818Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T05:59:44.250Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T05:59:44.258Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T06:04:11.374Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T06:04:11.691Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T06:04:11.695Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T06:05:59.522Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T06:05:59.806Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T06:05:59.809Z"}
+{"level":"info","message":"string","timestamp":"2025-12-23T06:06:10.637Z"}
+{"level":"info","message":"undefined","timestamp":"2025-12-23T06:06:16.865Z"}
+{"level":"info","message":"string","timestamp":"2025-12-23T06:06:26.327Z"}
+{"level":"info","message":"string","timestamp":"2025-12-23T06:06:35.469Z"}
+{"level":"info","message":"undefined","timestamp":"2025-12-23T06:07:08.439Z"}
+{"level":"info","message":"string","timestamp":"2025-12-23T06:07:15.436Z"}
+{"level":"info","message":"undefined","timestamp":"2025-12-23T06:07:51.226Z"}
+{"level":"info","message":"undefined","timestamp":"2025-12-23T06:08:28.260Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T06:09:12.307Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T06:09:12.573Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T06:09:12.575Z"}
+{"level":"info","message":"undefined","timestamp":"2025-12-23T06:09:23.372Z"}
+{"level":"info","message":"undefined","timestamp":"2025-12-23T06:09:35.950Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T06:16:50.192Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T06:16:50.472Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T06:16:50.475Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T06:19:06.972Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T06:19:07.440Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T06:19:07.445Z"}
+{"level":"info","message":"yes","timestamp":"2025-12-23T06:19:14.726Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T06:27:36.955Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T06:27:37.234Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T06:27:37.236Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T06:28:41.070Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T06:28:41.384Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T06:28:41.387Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T06:30:46.172Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T06:30:46.460Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T06:30:46.463Z"}
+{"level":"info","timestamp":"2025-12-23T06:30:52.755Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T06:31:38.605Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T06:31:38.876Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T06:31:38.878Z"}
+{"level":"info","timestamp":"2025-12-23T06:31:44.666Z"}
+{"level":"info","timestamp":"2025-12-23T06:31:44.668Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T06:34:28.831Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T06:34:29.090Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T06:34:29.093Z"}
+{"level":"info","timestamp":"2025-12-23T06:34:41.564Z"}
+{"level":"info","timestamp":"2025-12-23T06:34:41.565Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T06:44:22.005Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T06:44:22.266Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T06:44:22.270Z"}
+{"level":"info","timestamp":"2025-12-23T06:44:33.295Z"}
+{"level":"info","timestamp":"2025-12-23T06:44:33.296Z"}
+{"level":"info","timestamp":"2025-12-23T06:48:30.538Z"}
+{"level":"info","timestamp":"2025-12-23T06:48:30.539Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T06:53:46.413Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T06:53:46.725Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T06:53:46.729Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T06:58:43.996Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T06:58:44.295Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T06:58:44.298Z"}
+{"level":"info","message":"this is","timestamp":"2025-12-23T06:58:53.546Z"}
+{"level":"info","message":"this is","timestamp":"2025-12-23T06:59:28.907Z"}
+{"level":"info","message":"this is","role":"PROJECT_MANAGER","timestamp":"2025-12-23T06:59:44.847Z"}
+{"level":"info","message":"this is","role":"ADMIN","timestamp":"2025-12-23T06:59:59.312Z"}
+{"level":"info","message":"this is","timestamp":"2025-12-23T07:00:09.314Z"}
+{"level":"info","message":"this is","timestamp":"2025-12-23T07:00:45.876Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T07:10:34.513Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T07:10:34.774Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T07:10:34.777Z"}
+{"level":"info","message":"loggin","timestamp":"2025-12-23T07:10:43.827Z"}
+{"level":"info","message":"loggin","timestamp":"2025-12-23T07:11:10.879Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T07:15:17.739Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T07:15:18.005Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T07:15:18.008Z"}
+{"level":"info","message":"loggin","timestamp":"2025-12-23T07:15:27.257Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T07:17:11.962Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T07:17:12.222Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T07:17:12.225Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-23T07:19:16.232Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-23T07:19:16.489Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-23T07:19:16.492Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-24T14:03:08.747Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-24T14:03:09.540Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-24T14:03:09.544Z"}
+{"level":"error","message":"ApiError: Project with name 'Community Management and Building of Health Care Infrastructure' already exists in this portfolio","method":"POST","path":"/api/projects","stack":"ApiError: Project with name 'Community Management and Building of Health Care Infrastructure' already exists in this portfolio\n    at /home/zangetsu/ppms-be/src/services/project.service.ts:110:11\n    at Generator.next (<anonymous>)\n    at fulfilled (/home/zangetsu/ppms-be/src/services/project.service.ts:5:58)","timestamp":"2025-12-24T14:15:28.578Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-24T14:38:49.112Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-24T14:38:49.384Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-24T14:38:49.388Z"}
+{"level":"error","message":"Error: Must supply api_key","method":"POST","path":"/api/projects/cmjk3ivzn0001ude1ndldgzr8/files","stack":"Error: Must supply api_key\n    at ensureOption (/home/zangetsu/ppms-be/node_modules/cloudinary/lib/utils/ensureOption.js:19:13)\n    at Object.sign_request (/home/zangetsu/ppms-be/node_modules/cloudinary/lib/utils/index.js:1151:16)\n    at Object.process_request_params (/home/zangetsu/ppms-be/node_modules/cloudinary/lib/utils/index.js:1203:22)\n    at call_api (/home/zangetsu/ppms-be/node_modules/cloudinary/lib/uploader.js:474:18)\n    at Object.upload (/home/zangetsu/ppms-be/node_modules/cloudinary/lib/uploader.js:53:10)\n    at Object.upload_stream (/home/zangetsu/ppms-be/node_modules/cloudinary/lib/uploader.js:40:18)\n    at Object.upload_stream (/home/zangetsu/ppms-be/node_modules/cloudinary/lib/utils/index.js:1402:21)\n    at /home/zangetsu/ppms-be/node_modules/multer-storage-cloudinary/lib/index.js:128:52\n    at new Promise (<anonymous>)\n    at CloudinaryStorage.upload (/home/zangetsu/ppms-be/node_modules/multer-storage-cloudinary/lib/index.js:127:16)","timestamp":"2025-12-24T15:39:37.599Z"}
+{"level":"error","message":"Error: Must supply api_key","method":"POST","path":"/api/projects/cmjk3ivzn0001ude1ndldgzr8/files","stack":"Error: Must supply api_key\n    at ensureOption (/home/zangetsu/ppms-be/node_modules/cloudinary/lib/utils/ensureOption.js:19:13)\n    at Object.sign_request (/home/zangetsu/ppms-be/node_modules/cloudinary/lib/utils/index.js:1151:16)\n    at Object.process_request_params (/home/zangetsu/ppms-be/node_modules/cloudinary/lib/utils/index.js:1203:22)\n    at call_api (/home/zangetsu/ppms-be/node_modules/cloudinary/lib/uploader.js:474:18)\n    at Object.upload (/home/zangetsu/ppms-be/node_modules/cloudinary/lib/uploader.js:53:10)\n    at Object.upload_stream (/home/zangetsu/ppms-be/node_modules/cloudinary/lib/uploader.js:40:18)\n    at Object.upload_stream (/home/zangetsu/ppms-be/node_modules/cloudinary/lib/utils/index.js:1402:21)\n    at /home/zangetsu/ppms-be/node_modules/multer-storage-cloudinary/lib/index.js:128:52\n    at new Promise (<anonymous>)\n    at CloudinaryStorage.upload (/home/zangetsu/ppms-be/node_modules/multer-storage-cloudinary/lib/index.js:127:16)","timestamp":"2025-12-24T15:39:39.280Z"}
+{"level":"error","message":"Error: Notification not found","method":"PATCH","path":"/api/notifications/1/read","stack":"Error: Notification not found\n    at /home/zangetsu/ppms-be/src/services/notification.service.ts:108:11\n    at Generator.next (<anonymous>)\n    at fulfilled (/home/zangetsu/ppms-be/src/services/notification.service.ts:5:58)","timestamp":"2025-12-24T18:34:27.123Z"}
+{"level":"error","message":"PrismaClientValidationError: \nInvalid `prisma.notification.findMany()` invocation in\n/home/zangetsu/ppms-be/src/services/notification.service.ts:42:25\n\n  39 }\n  40 \n  41 const [notifications, total] = await Promise.all([\n→ 42   prisma.notification.findMany({\n         where: {\n           userId: \"cmjhharcf0000udu0f8u0p32n\"\n         },\n         orderBy: [\n           {\n             read: \"asc\"\n           },\n           {\n             priority: \"desc\"\n           },\n           {\n             createdAt: \"desc\"\n           }\n         ],\n         skip: 0,\n         take: \"20\",\n               ~~~~\n         include: {\n           actor: {\n             select: {\n               id: true,\n               name: true,\n               email: true,\n               role: true\n             }\n           }\n         }\n       })\n\nArgument `take`: Invalid value provided. Expected Int, provided String.","method":"GET","path":"/api/notifications","stack":"PrismaClientValidationError: \nInvalid `prisma.notification.findMany()` invocation in\n/home/zangetsu/ppms-be/src/services/notification.service.ts:42:25\n\n  39 }\n  40 \n  41 const [notifications, total] = await Promise.all([\n→ 42   prisma.notification.findMany({\n         where: {\n           userId: \"cmjhharcf0000udu0f8u0p32n\"\n         },\n         orderBy: [\n           {\n             read: \"asc\"\n           },\n           {\n             priority: \"desc\"\n           },\n           {\n             createdAt: \"desc\"\n           }\n         ],\n         skip: 0,\n         take: \"20\",\n               ~~~~\n         include: {\n           actor: {\n             select: {\n               id: true,\n               name: true,\n               email: true,\n               role: true\n             }\n           }\n         }\n       })\n\nArgument `take`: Invalid value provided. Expected Int, provided String.\n    at kn (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async Promise.all (index 0)","timestamp":"2025-12-24T18:34:50.912Z"}
+{"level":"error","message":"PrismaClientValidationError: \nInvalid `prisma.notification.findMany()` invocation in\n/home/zangetsu/ppms-be/src/services/notification.service.ts:42:25\n\n  39 }\n  40 \n  41 const [notifications, total] = await Promise.all([\n→ 42   prisma.notification.findMany({\n         where: {\n           userId: \"cmjhharcf0000udu0f8u0p32n\"\n         },\n         orderBy: [\n           {\n             read: \"asc\"\n           },\n           {\n             priority: \"desc\"\n           },\n           {\n             createdAt: \"desc\"\n           }\n         ],\n         skip: 0,\n         take: \"20\",\n               ~~~~\n         include: {\n           actor: {\n             select: {\n               id: true,\n               name: true,\n               email: true,\n               role: true\n             }\n           }\n         }\n       })\n\nArgument `take`: Invalid value provided. Expected Int, provided String.","method":"GET","path":"/api/notifications","stack":"PrismaClientValidationError: \nInvalid `prisma.notification.findMany()` invocation in\n/home/zangetsu/ppms-be/src/services/notification.service.ts:42:25\n\n  39 }\n  40 \n  41 const [notifications, total] = await Promise.all([\n→ 42   prisma.notification.findMany({\n         where: {\n           userId: \"cmjhharcf0000udu0f8u0p32n\"\n         },\n         orderBy: [\n           {\n             read: \"asc\"\n           },\n           {\n             priority: \"desc\"\n           },\n           {\n             createdAt: \"desc\"\n           }\n         ],\n         skip: 0,\n         take: \"20\",\n               ~~~~\n         include: {\n           actor: {\n             select: {\n               id: true,\n               name: true,\n               email: true,\n               role: true\n             }\n           }\n         }\n       })\n\nArgument `take`: Invalid value provided. Expected Int, provided String.\n    at kn (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async Promise.all (index 0)","timestamp":"2025-12-24T18:34:51.936Z"}
+{"level":"error","message":"PrismaClientValidationError: \nInvalid `prisma.notification.findMany()` invocation in\n/home/zangetsu/ppms-be/src/services/notification.service.ts:42:25\n\n  39 }\n  40 \n  41 const [notifications, total] = await Promise.all([\n→ 42   prisma.notification.findMany({\n         where: {\n           userId: \"cmjhharcf0000udu0f8u0p32n\",\n           priority: \"URGENT\"\n         },\n         orderBy: [\n           {\n             read: \"asc\"\n           },\n           {\n             priority: \"desc\"\n           },\n           {\n             createdAt: \"desc\"\n           }\n         ],\n         skip: 0,\n         take: \"20\",\n               ~~~~\n         include: {\n           actor: {\n             select: {\n               id: true,\n               name: true,\n               email: true,\n               role: true\n             }\n           }\n         }\n       })\n\nArgument `take`: Invalid value provided. Expected Int, provided String.","method":"GET","path":"/api/notifications","stack":"PrismaClientValidationError: \nInvalid `prisma.notification.findMany()` invocation in\n/home/zangetsu/ppms-be/src/services/notification.service.ts:42:25\n\n  39 }\n  40 \n  41 const [notifications, total] = await Promise.all([\n→ 42   prisma.notification.findMany({\n         where: {\n           userId: \"cmjhharcf0000udu0f8u0p32n\",\n           priority: \"URGENT\"\n         },\n         orderBy: [\n           {\n             read: \"asc\"\n           },\n           {\n             priority: \"desc\"\n           },\n           {\n             createdAt: \"desc\"\n           }\n         ],\n         skip: 0,\n         take: \"20\",\n               ~~~~\n         include: {\n           actor: {\n             select: {\n               id: true,\n               name: true,\n               email: true,\n               role: true\n             }\n           }\n         }\n       })\n\nArgument `take`: Invalid value provided. Expected Int, provided String.\n    at kn (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async Promise.all (index 0)","timestamp":"2025-12-24T18:35:05.691Z"}
+{"level":"error","message":"PrismaClientValidationError: \nInvalid `prisma.notification.findMany()` invocation in\n/home/zangetsu/ppms-be/src/services/notification.service.ts:42:25\n\n  39 }\n  40 \n  41 const [notifications, total] = await Promise.all([\n→ 42   prisma.notification.findMany({\n         where: {\n           userId: \"cmjhharcf0000udu0f8u0p32n\",\n           priority: \"URGENT\"\n         },\n         orderBy: [\n           {\n             read: \"asc\"\n           },\n           {\n             priority: \"desc\"\n           },\n           {\n             createdAt: \"desc\"\n           }\n         ],\n         skip: 0,\n         take: \"20\",\n               ~~~~\n         include: {\n           actor: {\n             select: {\n               id: true,\n               name: true,\n               email: true,\n               role: true\n             }\n           }\n         }\n       })\n\nArgument `take`: Invalid value provided. Expected Int, provided String.","method":"GET","path":"/api/notifications","stack":"PrismaClientValidationError: \nInvalid `prisma.notification.findMany()` invocation in\n/home/zangetsu/ppms-be/src/services/notification.service.ts:42:25\n\n  39 }\n  40 \n  41 const [notifications, total] = await Promise.all([\n→ 42   prisma.notification.findMany({\n         where: {\n           userId: \"cmjhharcf0000udu0f8u0p32n\",\n           priority: \"URGENT\"\n         },\n         orderBy: [\n           {\n             read: \"asc\"\n           },\n           {\n             priority: \"desc\"\n           },\n           {\n             createdAt: \"desc\"\n           }\n         ],\n         skip: 0,\n         take: \"20\",\n               ~~~~\n         include: {\n           actor: {\n             select: {\n               id: true,\n               name: true,\n               email: true,\n               role: true\n             }\n           }\n         }\n       })\n\nArgument `take`: Invalid value provided. Expected Int, provided String.\n    at kn (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/home/zangetsu/ppms-be/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async Promise.all (index 0)","timestamp":"2025-12-24T18:35:06.734Z"}
+{"level":"info","message":"Shutting down gracefully...","timestamp":"2025-12-24T19:19:48.580Z"}
+{"level":"info","message":"Disconnected from database","timestamp":"2025-12-24T19:19:48.589Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2025-12-30T17:17:23.010Z"}
+{"level":"info","message":"Connected to database","timestamp":"2025-12-30T17:17:24.003Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2025-12-30T17:17:24.023Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-01T06:25:31.205Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-01T06:25:32.249Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-01T06:25:32.251Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-01T07:04:49.368Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-01T07:04:49.672Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-01T07:04:49.674Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-01T07:37:48.404Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-01T07:37:48.758Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-01T07:37:48.761Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-01T07:44:31.383Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-01T07:44:31.642Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-01T07:44:31.644Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-01T08:00:20.204Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-01T08:00:20.485Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-01T08:00:20.490Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-01T08:01:10.771Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-01T08:01:11.049Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-01T08:01:11.052Z"}
+{"level":"info","message":"Shutting down gracefully...","timestamp":"2026-01-01T10:53:59.929Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-01T18:18:52.527Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-01T18:18:59.830Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-01T18:19:00.042Z"}
+{"level":"info","message":"Shutting down gracefully...","timestamp":"2026-01-01T18:57:55.915Z"}
+{"level":"info","message":"Disconnected from database","timestamp":"2026-01-01T18:57:55.922Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-01T19:08:21.325Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-01T19:08:22.195Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-01T19:08:22.198Z"}
+{"level":"error","message":"ApiError: Invalid or expired token","method":"GET","path":"/api/programs/c7928891-bb9d-4105-8d59-6658fb3a4abf","stack":"ApiError: Invalid or expired token\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:66:12\n    at Generator.next (<anonymous>)\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:8:71\n    at new Promise (<anonymous>)\n    at __awaiter (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:4:12)\n    at authenticate (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:25:5)\n    at Layer.handleRequest (/home/zangetsu/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at next (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:157:13)\n    at Route.dispatch (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:117:3)\n    at handle (/home/zangetsu/ppms-be/node_modules/router/index.js:435:11)","timestamp":"2026-01-01T19:14:16.579Z"}
+{"level":"error","message":"ApiError: Invalid or expired token","method":"GET","path":"/api/programs/c7928891-bb9d-4105-8d59-6658fb3a4abf/stats","stack":"ApiError: Invalid or expired token\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:66:12\n    at Generator.next (<anonymous>)\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:8:71\n    at new Promise (<anonymous>)\n    at __awaiter (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:4:12)\n    at authenticate (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:25:5)\n    at Layer.handleRequest (/home/zangetsu/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at next (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:157:13)\n    at Route.dispatch (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:117:3)\n    at handle (/home/zangetsu/ppms-be/node_modules/router/index.js:435:11)","timestamp":"2026-01-01T19:14:16.597Z"}
+{"level":"error","message":"ApiError: Invalid or expired token","method":"GET","path":"/api/programs/c7928891-bb9d-4105-8d59-6658fb3a4abf/projects","stack":"ApiError: Invalid or expired token\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:66:12\n    at Generator.next (<anonymous>)\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:8:71\n    at new Promise (<anonymous>)\n    at __awaiter (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:4:12)\n    at authenticate (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:25:5)\n    at Layer.handleRequest (/home/zangetsu/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at next (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:157:13)\n    at Route.dispatch (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:117:3)\n    at handle (/home/zangetsu/ppms-be/node_modules/router/index.js:435:11)","timestamp":"2026-01-01T19:14:16.612Z"}
+{"level":"error","message":"ApiError: Authorization token is required","method":"GET","path":"/api/programs/c7928891-bb9d-4105-8d59-6658fb3a4abf","stack":"ApiError: Authorization token is required\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:30:13\n    at Generator.next (<anonymous>)\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:8:71\n    at new Promise (<anonymous>)\n    at __awaiter (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:4:12)\n    at authenticate (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:25:5)\n    at Layer.handleRequest (/home/zangetsu/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at next (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:157:13)\n    at Route.dispatch (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:117:3)\n    at handle (/home/zangetsu/ppms-be/node_modules/router/index.js:435:11)","timestamp":"2026-01-01T19:14:17.676Z"}
+{"level":"error","message":"ApiError: Authorization token is required","method":"GET","path":"/api/programs/c7928891-bb9d-4105-8d59-6658fb3a4abf/projects","stack":"ApiError: Authorization token is required\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:30:13\n    at Generator.next (<anonymous>)\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:8:71\n    at new Promise (<anonymous>)\n    at __awaiter (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:4:12)\n    at authenticate (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:25:5)\n    at Layer.handleRequest (/home/zangetsu/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at next (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:157:13)\n    at Route.dispatch (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:117:3)\n    at handle (/home/zangetsu/ppms-be/node_modules/router/index.js:435:11)","timestamp":"2026-01-01T19:14:17.802Z"}
+{"level":"error","message":"ApiError: Authorization token is required","method":"GET","path":"/api/programs/c7928891-bb9d-4105-8d59-6658fb3a4abf/stats","stack":"ApiError: Authorization token is required\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:30:13\n    at Generator.next (<anonymous>)\n    at /home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:8:71\n    at new Promise (<anonymous>)\n    at __awaiter (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:4:12)\n    at authenticate (/home/zangetsu/ppms-be/src/middleware/auth.middleware.ts:25:5)\n    at Layer.handleRequest (/home/zangetsu/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at next (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:157:13)\n    at Route.dispatch (/home/zangetsu/ppms-be/node_modules/router/lib/route.js:117:3)\n    at handle (/home/zangetsu/ppms-be/node_modules/router/index.js:435:11)","timestamp":"2026-01-01T19:14:17.840Z"}
+{"level":"error","message":"ApiError: One or more assignees are not members of the project","method":"POST","path":"/api/tasks","stack":"ApiError: One or more assignees are not members of the project\n    at /home/zangetsu/ppms-be/src/services/task.service.ts:116:13\n    at Generator.next (<anonymous>)\n    at fulfilled (/home/zangetsu/ppms-be/src/services/task.service.ts:5:58)","timestamp":"2026-01-01T19:18:51.259Z"}
+{"level":"error","message":"ApiError: One or more assignees are not members of the project","method":"POST","path":"/api/tasks","stack":"ApiError: One or more assignees are not members of the project\n    at /home/zangetsu/ppms-be/src/services/task.service.ts:116:13\n    at Generator.next (<anonymous>)\n    at fulfilled (/home/zangetsu/ppms-be/src/services/task.service.ts:5:58)","timestamp":"2026-01-01T19:18:56.633Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-01T20:05:39.465Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-01T20:05:39.729Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-01T20:05:39.732Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-01T20:32:32.990Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-01T20:32:33.263Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-01T20:32:33.266Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-01T20:54:34.686Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-01T20:54:34.955Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-01T20:54:34.958Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-01T20:56:56.525Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-01T20:56:56.836Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-01T20:56:56.841Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-01T20:57:20.600Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-01T20:57:20.866Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-01T20:57:20.869Z"}
+{"level":"info","message":"Shutting down gracefully...","timestamp":"2026-01-01T22:13:26.823Z"}
+{"level":"info","message":"Disconnected from database","timestamp":"2026-01-01T22:13:26.835Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-02T15:24:48.991Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-02T15:24:49.761Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-02T15:24:49.764Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-02T15:52:25.310Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-02T15:52:25.549Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-02T15:52:25.552Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-02T15:54:37.275Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-02T15:54:37.601Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-02T15:54:37.605Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-02T16:12:17.816Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-02T16:12:18.142Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-02T16:12:18.146Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-02T16:21:27.947Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-02T16:21:28.214Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-02T16:21:28.219Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-02T16:22:40.676Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-02T16:22:41.276Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-02T16:22:41.280Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-02T16:24:08.464Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-02T16:24:08.737Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-02T16:24:08.740Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-02T16:29:26.398Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-02T16:29:26.668Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-02T16:29:26.671Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-02T16:36:09.274Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-02T16:36:09.538Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-02T16:36:09.541Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-02T16:41:20.757Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-02T16:41:20.995Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-02T16:41:20.998Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-02T17:00:42.273Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-02T17:00:42.583Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-02T17:00:42.588Z"}
+{"level":"info","message":"Shutting down gracefully...","timestamp":"2026-01-02T17:01:16.908Z"}
+{"level":"info","message":"Disconnected from database","timestamp":"2026-01-02T17:01:16.915Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-02T17:19:45.143Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-02T17:19:45.968Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-02T17:19:45.971Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-03T07:44:15.112Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-03T07:44:15.400Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-03T07:44:15.403Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-03T08:03:21.758Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-03T08:03:22.050Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-03T08:03:22.054Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-03T08:57:29.910Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-03T08:57:30.174Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-03T08:57:30.177Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-03T08:57:52.784Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-03T08:57:53.033Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-03T08:57:53.035Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-03T08:58:13.043Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-03T08:58:13.308Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-03T08:58:13.311Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-03T09:11:02.411Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-03T09:11:02.703Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-03T09:11:02.706Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-03T09:15:43.141Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-03T09:15:43.425Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-03T09:15:43.427Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-03T09:21:32.181Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-03T09:21:32.578Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-03T09:21:32.582Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-03T09:36:49.584Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-03T09:36:49.832Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-03T09:36:49.835Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-03T09:45:37.412Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-03T09:45:37.690Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-03T09:45:37.693Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-03T10:13:28.476Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-03T10:13:28.755Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-03T10:13:28.758Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-03T10:17:55.162Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-03T10:17:55.611Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-03T10:17:55.615Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-03T10:19:10.484Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-03T10:19:11.173Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-03T10:19:11.178Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-03T10:19:46.259Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-03T10:19:46.617Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-03T10:19:46.621Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-03T10:22:11.654Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-03T10:22:11.904Z"}
+{"level":"info","message":"Server is running on port 5000","timestamp":"2026-01-03T10:22:11.907Z"}
