@@ -1,5 +1,6 @@
 import { PrismaClient, Program, ProgramStatus, Role } from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
+import { getNestedPortfolioScope } from "../utils/check-access.util";
 
 const prisma = new PrismaClient();
 
@@ -87,11 +88,18 @@ export const getAllPrograms = async (filters?: {
   portfolioId?: string;
   status?: ProgramStatus;
   search?: string;
+}, user?: {
+  role: Role;
+  userId: string;
 }) => {
-  const where: any = {};
+  const nestedPortfolioScope = getNestedPortfolioScope(user);
+  const where: any = { ...nestedPortfolioScope };
 
   if (filters?.portfolioId) {
-    where.portfolioId = filters.portfolioId;
+    where.AND = [
+      ...(where.AND || []),
+      { portfolioId: filters.portfolioId },
+    ];
   }
 
   if (filters?.status) {

@@ -9,6 +9,7 @@ import {
 import { ApiError, HttpStatus } from "../utils/error.utils";
 import { notifyProjectAssignment, notifyMention } from "./notification.service";
 import { getRoleDefaultPermissions } from "../utils/helpers";
+import { getNestedPortfolioScope, getProjectScope } from "../utils/check-access.util";
 import multer from "multer";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "../config/cloudinary";
@@ -172,38 +173,52 @@ export const getAllProjects = async (
   search?: string;
   standalone?: boolean; // Filter for standalone projects only
 }) => {
-  const where: any = {};
+  const nestedPortfolioScope = getNestedPortfolioScope(user);
+  const projectScope = getProjectScope(user);
+  let where: any = {};
 
+  if (user.role === "PROGRAM_MANAGER") {
+    where = { ...nestedPortfolioScope };
+  } else if (user.role === "PROJECT_MANAGER") {
+    where = { ...projectScope };
+  }
+  
   if (filters?.portfolioId) {
-    where.portfolioId = filters.portfolioId;
+    where = {
+      ...where,
+      portfolioId: filters.portfolioId,
+    };
   }
-
+  
   if (filters?.programId) {
-    where.programId = filters.programId;
+    where = {
+      ...where,
+      programId: filters.programId,
+    };
   }
-
-  // Filter for standalone projects
+  
+  // Standalone projects
   if (filters?.standalone === true) {
-    where.programId = null;
+    where = {
+      ...where,
+      programId: null,
+    };
   }
-
+  
   if (filters?.status) {
-    where.status = filters.status;
+    where = {
+      ...where,
+      status: filters.status,
+    };
   }
-
+  
   if (filters?.search) {
-    where.OR = [
-      { name: { contains: filters.search, mode: "insensitive" } },
-      { description: { contains: filters.search, mode: "insensitive" } },
-    ];
-  }
-
-  if (user.role === "PROJECT_MANAGER") {
-    where.members = {
-      some: {
-        userId: user.userId,
-        role: "PROJECT_MANAGER",
-      },
+    where = {
+      ...where,
+      OR: [
+        { name: { contains: filters.search, mode: "insensitive" } },
+        { description: { contains: filters.search, mode: "insensitive" } },
+      ],
     };
   }
 
@@ -232,30 +247,7 @@ export const getAllProjects = async (
 /**
  * Get project by ID
  */
-export const getProjectById = async (
-  id: string,
-  user: {
-    role: Role;
-    userId: string;
-  },
-) => {
-  if(user.role === "PROJECT_MANAGER") {
-    const projectManagerIsMember = await prisma.projectMember.findFirst({
-      where: {
-        id,
-        userId: user.userId,
-      },
-    });
-  
-    if (!projectManagerIsMember) {
-      throw new ApiError(
-        HttpStatus.FORBIDDEN,
-        "You are not a member of this project"
-      );
-    }
-    return;
-  }
-
+export const getProjectById = async (id: string) => {
   const project = await prisma.project.findUnique({
     where: { id },
     include: {
@@ -339,9 +331,30 @@ export const updateProject = async (
   userId: string,
   userRole: Role
 ): Promise<Project> => {
+  let where: any = { id };
+
+  const nestedPortfolioScope = getNestedPortfolioScope({
+    role: userRole,
+    userId: userId,
+  });
+
+  if (userRole === "PROGRAM_MANAGER") {
+    where = { id, ...nestedPortfolioScope };
+  } else if (userRole === "PROJECT_MANAGER") {
+    where = {
+      id,
+      members: {
+        some: {
+          userId: userId,
+          role: "PROJECT_MANAGER",
+        },
+      },
+    };
+  }
+
   // Check if project exists
-  const project = await prisma.project.findUnique({
-    where: { id },
+  const project = await prisma.project.findFirst({
+    where,
     include: {
       portfolio: true,
       program: true,
@@ -505,10 +518,34 @@ export const updateProject = async (
  * Delete project
  * Note: This will cascade delete all tasks and related data
  */
-export const deleteProject = async (id: string): Promise<void> => {
+export const deleteProject = async (id: string, userId: string, role: Role,): Promise<void> => {
+  let whereQuery:any = { id };
+
+  const nestedPortfolioScope = getNestedPortfolioScope({
+    role: role,
+    userId: userId,
+  });
+
+  if (role === "PROGRAM_MANAGER") {
+    whereQuery = { id, ...nestedPortfolioScope };
+  } else if (role === "PROJECT_MANAGER") {
+    whereQuery = {
+      id,
+      members: {
+        some: {
+          userId: userId,
+          role: "PROJECT_MANAGER",
+        },
+      },
+    };
+  }
+
   // Check if project exists
-  const project = await prisma.project.findUnique({
-    where: { id },
+  const project = await prisma.project.findFirst({
+    where: { 
+      id,
+      ...whereQuery
+    },
     include: {
       _count: {
         select: {
@@ -700,29 +737,35 @@ export const addProjectMember = async (
   permissionIds: string[] | undefined,
   currentUserId: string,
   role: ProjectMemberRole,
-  currentUserRole?: string
+  currentUserRole?: Role
 ): Promise<any> => {
-  // check if project manager is assigned to project before he can add members
-  if(currentUserRole === "PROJECT_MANAGER") {
-    const projectManagerIsMember = await prisma.projectMember.findFirst({
-      where: {
-        projectId,
-        userId: currentUserId,
+  let whereQuery:any = { projectId };
+
+  const nestedPortfolioScope = getNestedPortfolioScope({
+    role: currentUserRole,
+    userId: currentUserId,
+  });
+
+  if (currentUserRole === "PROGRAM_MANAGER") {
+    whereQuery = { projectId, ...nestedPortfolioScope };
+  } else if (currentUserRole === "PROJECT_MANAGER") {
+    whereQuery = {
+      projectId,
+      members: {
+        some: {
+          userId: currentUserId,
+          role: "PROJECT_MANAGER",
+        },
       },
-    });
-  
-    if (!projectManagerIsMember) {
-      throw new ApiError(
-        HttpStatus.FORBIDDEN,
-        "You are not a member of this project"
-      );
-    }
-    return;
+    };
   }
 
   // 1. CHECK IF PROJECT EXISTS
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
+  const project = await prisma.project.findFirst({
+    where: { 
+      id: projectId,
+      ...whereQuery
+    },
   });
 
   if (!project) {
@@ -847,22 +890,25 @@ export const updateProjectMemberPermissions = async (
     userId: string;
   },
 ): Promise<any> => {
-   // check if project manager is assigned to project before he can add members
-   if(user.role === "PROJECT_MANAGER") {
-    const projectManagerIsMember = await prisma.projectMember.findFirst({
-      where: {
-        projectId,
-        userId: user.userId,
-      },
-    });
+  const project = await prisma.project.findFirst({
+    where:
+      user.role === "ADMIN"
+        ? { id: projectId }
+        : user.role === "PROGRAM_MANAGER"
+        ? {
+            id: projectId,
+            portfolio: {
+              programManagers: { some: { id: user.userId } },
+            },
+          }
+        : {
+            id: projectId,
+            members: { some: { userId: user.userId, role: "PROJECT_MANAGER" } },
+          },
+  });
   
-    if (!projectManagerIsMember) {
-      throw new ApiError(
-        HttpStatus.FORBIDDEN,
-        "You are not a member of this project"
-      );
-    }
-    return;
+  if (!project) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Project not found or access denied");
   }
 
   // Check if project member exists
@@ -898,7 +944,7 @@ export const updateProjectMemberPermissions = async (
   };
 
   if (role) {
-    updateData.role = role; // 👈 ADD THIS
+    updateData.role = role;
   }
   return prisma.projectMember.update({
     where: {
@@ -1098,7 +1144,38 @@ export const createProjectComment = async (
 };
 
 // Get project comments
-export const getProjectComments = async (projectId: string): Promise<any[]> => {
+export const getProjectComments = async (
+  projectId: string,
+  user?: {
+    userId: string,
+    role: Role
+  }
+): Promise<any[]> => {
+  let whereQuery: any = { id: projectId };
+
+  const nestedPortfolioScope = getNestedPortfolioScope({
+    role: user.role,
+    userId: user.userId,
+  });
+  const projectScope = getProjectScope({
+    role: user.role,
+    userId: user.userId,
+  });
+
+  if (user.role === "PROGRAM_MANAGER") {
+    whereQuery.project = { id: projectId, ...nestedPortfolioScope };
+  } else if (user.role === "PROJECT_MANAGER") {
+    whereQuery.project = { id: projectId, ...projectScope };
+  }
+
+  const project = await prisma.project.findFirst({
+    where: whereQuery,
+  });
+
+  if (!project) {
+    throw new ApiError(HttpStatus.NOT_FOUND, "Project not found or access denied");
+  }
+
   const comments = await prisma.projectComment.findMany({
     where: { projectId },
     include: {
@@ -1113,7 +1190,6 @@ export const getProjectComments = async (projectId: string): Promise<any[]> => {
       createdAt: "desc",
     },
   });
-
   return comments.map((comment) => ({
     ...comment,
     isEdited: comment.updatedAt.getTime() !== comment.createdAt.getTime(),
@@ -1124,19 +1200,15 @@ export const getProjectComments = async (projectId: string): Promise<any[]> => {
 export const updateProjectComment = async (
   commentId: string,
   userId: string,
-  content: string
-): Promise<any> => {
+  content: string,
+  user?: {
+    role: Role;
+    userId: string;
+  },
+): Promise<any> => {  
   // Check if comment exists and belongs to user
   const comment = await prisma.projectComment.findUnique({
-    where: { id: commentId },
-    include: {
-      author: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
+    where: { id: commentId},
   });
 
   if (!comment) {
@@ -1148,6 +1220,23 @@ export const updateProjectComment = async (
       HttpStatus.FORBIDDEN,
       "You can only edit your own comments"
     );
+  }
+
+  let whereQuery: any = { id: commentId };
+
+  const nestedPortfolioScope = getNestedPortfolioScope({
+    role: user.role,
+    userId: user.userId,
+  });
+  const projectScope = getProjectScope({
+    role: user.role,
+    userId: user.userId,
+  });
+  
+  if (user.role === "PROGRAM_MANAGER") {
+    whereQuery = { id: comment.projectId, ...nestedPortfolioScope };
+  } else if (user.role === "PROJECT_MANAGER") {
+    whereQuery = { id: comment.projectId, ...projectScope};
   }
 
   const updatedComment = await prisma.projectComment.update({
@@ -1172,7 +1261,11 @@ export const updateProjectComment = async (
 // Delete project comment
 export const deleteProjectComment = async (
   commentId: string,
-  userId: string
+  userId: string,
+  user?: {
+    role: Role;
+    userId: string;
+  },
 ): Promise<void> => {
   // Check if comment exists and belongs to user
   const comment = await prisma.projectComment.findUnique({
@@ -1188,6 +1281,31 @@ export const deleteProjectComment = async (
       HttpStatus.FORBIDDEN,
       "You can only delete your own comments"
     );
+  }
+
+  let whereQuery: any = { id: comment.projectId }; 
+
+  const nestedPortfolioScope = getNestedPortfolioScope({
+    role: user.role,
+    userId: user.userId,
+  });
+  const projectScope = getProjectScope({
+    role: user.role,
+    userId: user.userId,
+  });
+
+  if (user.role === "PROGRAM_MANAGER") {
+    whereQuery.project = { id: comment.projectId, ...nestedPortfolioScope };
+  } else if (user.role === "PROJECT_MANAGER") {
+    whereQuery.project = { id: comment.projectId, ...projectScope };
+  }
+
+  const project = await prisma.project.findFirst({
+    where: whereQuery,
+  });
+
+  if (!project) {
+    throw new ApiError(HttpStatus.FORBIDDEN, "Access denied");
   }
 
   await prisma.projectComment.delete({
@@ -1216,10 +1334,23 @@ export const getProjectActivity = async (projectId: string): Promise<any[]> => {
   return activities;
 };
 
-export const getProjectMembers = async (projectId: string): Promise<any[]> => {
-  // Check if project exists
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
+export const getProjectMembers = async (
+  projectId: string,
+  user?: {
+    role: Role;
+    userId: string;
+  },
+): Promise<any[]> => {
+  const whereQuery: any = { id: projectId }; 
+
+  if (user.role === "PROGRAM_MANAGER") {
+    whereQuery.portfolio = { programManagers: { some: { id: user.userId } } };
+  } else if (user.role === "PROJECT_MANAGER") {
+    whereQuery.members = { some: { userId: user.userId, role: "PROJECT_MANAGER" } };
+  }
+
+  const project = await prisma.project.findFirst({
+    where: whereQuery,
   });
 
   if (!project) {
@@ -1285,26 +1416,7 @@ export const updateProjectMemberRole = async (
   userId: string,
   role: ProjectMemberRole,
   updatedById: string,
-  updatedByRole?: string
 ): Promise<any> => {
-   // check if project manager is assigned to project before he can add members
-   if(updatedByRole === "PROJECT_MANAGER") {
-    const projectManagerIsMember = await prisma.projectMember.findFirst({
-      where: {
-        projectId,
-        userId: updatedById,
-      },
-    });
-  
-    if (!projectManagerIsMember) {
-      throw new ApiError(
-        HttpStatus.FORBIDDEN,
-        "You are not a member of this project"
-      );
-    }
-    return;
-  }
-
   // Check if project member exists
   const projectMember = await prisma.projectMember.findUnique({
     where: { userId_projectId: { userId, projectId } },
@@ -1350,22 +1462,7 @@ export const updateProjectMemberRole = async (
 export const removeProjectMember = async (
   projectId: string,
   memberId: string,
-  userId?: string
 ): Promise<void> => {
-   // check if project manager is assigned to project before he can add members
-   const projectManagerIsMember = await prisma.projectMember.findFirst({
-    where: {
-      projectId,
-      userId,
-    },
-  });
-
-  if (!projectManagerIsMember) {
-    throw new ApiError(
-      HttpStatus.FORBIDDEN,
-      "You are not a member of this project"
-    );
-  }
   // Check if project member exists
   const projectMember = await prisma.projectMember.findUnique({
     where: { id: memberId },

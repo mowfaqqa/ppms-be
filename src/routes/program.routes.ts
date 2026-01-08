@@ -16,6 +16,7 @@ import {
 } from "../services/program.service";
 import { auditLog } from "../middleware/audit.middleware";
 import { AuditAction, EntityType } from "@prisma/client";
+import { checkProgramPermission } from "../middleware/permission.middleware";
 
 const router = Router();
 
@@ -27,6 +28,7 @@ const router = Router();
 router.post(
   "/",
   authenticate,
+  checkProgramPermission(),
   authorize(["ADMIN", "PROGRAM_MANAGER"]),
   [
     check("name", "Name is required").notEmpty(),
@@ -91,6 +93,9 @@ router.get(
       portfolioId: portfolioId as string,
       status: status as any,
       search: search as string,
+    }, {
+      role: req.user.role,
+      userId: req.user.userId,
     });
 
     res.status(200).json({
@@ -108,6 +113,7 @@ router.get(
 router.get(
   "/:id",
   authenticate,
+  checkProgramPermission(),
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
@@ -181,6 +187,7 @@ router.put(
 router.delete(
   "/:id",
   authenticate,
+  checkProgramPermission(),
   authorize(["ADMIN", "PROGRAM_MANAGER"]),
   auditLog({
     action: AuditAction.DELETED,
@@ -206,6 +213,7 @@ router.delete(
 router.get(
   "/:id/stats",
   authenticate,
+  checkProgramPermission(),
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
@@ -226,6 +234,7 @@ router.get(
 router.get(
   "/:id/projects",
   authenticate,
+  checkProgramPermission(),
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
@@ -246,6 +255,7 @@ router.get(
 router.get(
   "/:id/activity",
   authenticate,
+  checkProgramPermission(),
   [
     check("limit", "Limit must be between 1 and 100")
       .optional()
@@ -312,6 +322,7 @@ router.post(
 router.get(
   "/:id/analytics",
   authenticate,
+  checkProgramPermission(),
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 

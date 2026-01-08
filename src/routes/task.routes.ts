@@ -111,6 +111,10 @@ router.get(
       assigneeId: assigneeId as string,
       parentTaskId: parentTaskId === "null" ? null : (parentTaskId as string),
       search: search as string,
+    }, 
+    {
+      userId: req.user.userId,
+      role: req.user.role,
     });
 
     res.status(200).json({
@@ -359,7 +363,13 @@ router.get(
   asyncHandler(async (req: any, res: any) => {
     const { taskId } = req.params;
 
-    const comments = await getTaskComments(taskId);
+    const comments = await getTaskComments(
+      taskId,
+      {
+        userId: req.user.userId,
+        role: req.user.role,
+      }
+    );
 
     res.status(200).json({
       success: true,

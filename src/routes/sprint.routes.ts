@@ -92,7 +92,11 @@ router.get(
     const { projectId } = req.params;
     const { status } = req.query;
 
-    const sprints = await getProjectSprints(projectId, status as any);
+    const sprints = await getProjectSprints(
+      projectId, 
+      status as any,
+      { role: req.user.role, userId: req.user.userId }
+    );
 
     res.status(200).json({
       success: true,

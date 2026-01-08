@@ -163,13 +163,7 @@ export const getProjectByIdController = async (
 ) => {
   try {
     const { id } = req.params;
-    const project = await getProjectById(
-      id,
-      {
-        role: req.user.role as Role,
-        userId: req.user.userId
-      }
-    );
+    const project = await getProjectById(id);
 
     res.status(HttpStatus.OK).json({
       success: true,

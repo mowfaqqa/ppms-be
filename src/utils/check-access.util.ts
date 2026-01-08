@@ -52,3 +52,43 @@ export const getNestedPortfolioScope = (user: {
   // ADMIN has complete access
   return {};
 };
+
+export const getProjectScope = (user: { role: Role; userId: string }) => {
+  if (user.role === "PROJECT_MANAGER") {
+    return {
+      project: {
+        members: {
+          some: {
+            userId: user.userId,
+            role: "PROJECT_MANAGER",
+          },
+        },
+      },
+    };
+  }
+
+  return {}; // ADMIN
+}
+
+export const getTaskScope = (user: { role: Role; userId: string }) => {
+  if (user.role === "PROGRAM_MANAGER") {
+    return {
+      project: getNestedPortfolioScope(user),
+    };
+  }
+
+  if (user.role === "PROJECT_MANAGER") {
+    return {
+      project: {
+        members: {
+          some: {
+            userId: user.userId,
+            role: "PROJECT_MANAGER",
+          },
+        },
+      },
+    };
+  }
+
+  return {}; // ADMIN
+};

@@ -81,7 +81,7 @@ const upload = multer({
 router.post(
   "/",
   authenticate,
-  authorize(["ADMIN", "PROJECT_MANAGER"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
   [
     check("name", "Name is required").notEmpty(),
     check("portfolioId", "Portfolio ID is required").notEmpty(),
@@ -169,13 +169,7 @@ router.get(
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
-    const project = await getProjectById(
-      id,
-      {
-        role: req.user.role,
-        userId: req.user.userId,
-      },
-    );
+    const project = await getProjectById(id);
 
     res.status(200).json({
       success: true,
@@ -192,7 +186,7 @@ router.get(
 router.put(
   "/:id",
   authenticate,
-  authorize(["ADMIN", "PROJECT_MANAGER"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
   auditLog({
     action: AuditAction.UPDATED,
     entityType: EntityType.PROJECT,
@@ -249,7 +243,7 @@ router.put(
 router.delete(
   "/:id",
   authenticate,
-  authorize(["ADMIN", "PROJECT_MANAGER"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
   checkProjectPermission("project.delete"),
   auditLog({
     action: AuditAction.DELETED,
@@ -258,7 +252,7 @@ router.delete(
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
-    await deleteProject(id);
+    await deleteProject(id, req.user.userId, req.user.role);
 
     res.status(200).json({
       success: true,
@@ -278,7 +272,13 @@ router.get(
   asyncHandler(async (req: any, res: any) => {
     const { projectId } = req.params;
 
-    const members = await getProjectMembers(projectId);
+    const members = await getProjectMembers(
+      projectId,
+      {
+        role: req.user.role,
+        userId: req.user.userId,
+      },
+    );
 
     res.status(200).json({
       success: true,
@@ -337,6 +337,7 @@ router.post(
 router.put(
   "/:projectId/members/:userId",
   authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
   checkProjectPermission("project.edit"),
   [
     check("permissionIds", "Permission IDs must be an array").isArray(),
@@ -360,7 +361,6 @@ router.put(
         userId,
         role as ProjectMemberRole,
         req.user!.userId,
-        req.user.role
       );
       return res.status(200).json({
         success: true,
@@ -408,7 +408,6 @@ router.patch(
       userId,
       role as ProjectMemberRole,
       req.user!.userId,
-      req.user.role
     );
 
     res.status(200).json({
@@ -428,6 +427,7 @@ router.patch(
 router.delete(
   "/:projectId/members/:userId",
   authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
   checkProjectPermission("project.edit"),
   auditLog({
     action: AuditAction.DELETED,
@@ -436,7 +436,10 @@ router.delete(
   asyncHandler(async (req: any, res: any) => {
     const { projectId, userId } = req.params;
 
-    await removeProjectMember(projectId, userId);
+    await removeProjectMember(
+      projectId, 
+      userId,
+    );
 
     res.status(200).json({
       success: true,
@@ -509,7 +512,13 @@ router.get(
   asyncHandler(async (req: any, res: any) => {
     const { projectId } = req.params;
 
-    const comments = await getProjectComments(projectId);
+    const comments = await getProjectComments(
+      projectId,
+      {
+        userId: req.user.userId,
+        role: req.user.role
+      }
+    );
 
     res.status(200).json({
       success: true,
