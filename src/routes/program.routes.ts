@@ -28,7 +28,6 @@ const router = Router();
 router.post(
   "/",
   authenticate,
-  checkProgramPermission(),
   authorize(["ADMIN", "PROGRAM_MANAGER"]),
   [
     check("name", "Name is required").notEmpty(),

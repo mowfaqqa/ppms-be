@@ -96,7 +96,7 @@ router.post(
 router.get(
   "/users",
   authenticate,
-  authorize(["ADMIN"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
   [
     check("role", "Invalid role")
       .optional()

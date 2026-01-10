@@ -9,7 +9,7 @@ import {
 import { ApiError, HttpStatus } from "../utils/error.utils";
 import { notifyProjectAssignment, notifyMention } from "./notification.service";
 import { getRoleDefaultPermissions } from "../utils/helpers";
-import { getNestedPortfolioScope, getProjectScope } from "../utils/check-access.util";
+import { getNestedPortfolioScope, getNestedProjectScope, getProjectScope } from "../utils/check-access.util";
 import multer from "multer";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "../config/cloudinary";
@@ -174,7 +174,7 @@ export const getAllProjects = async (
   standalone?: boolean; // Filter for standalone projects only
 }) => {
   const nestedPortfolioScope = getNestedPortfolioScope(user);
-  const projectScope = getProjectScope(user);
+  const projectScope = getNestedProjectScope(user);
   let where: any = {};
 
   if (user.role === "PROGRAM_MANAGER") {
@@ -739,7 +739,7 @@ export const addProjectMember = async (
   role: ProjectMemberRole,
   currentUserRole?: Role
 ): Promise<any> => {
-  let whereQuery:any = { projectId };
+  let whereQuery:any = { id: projectId };
 
   const nestedPortfolioScope = getNestedPortfolioScope({
     role: currentUserRole,
@@ -747,10 +747,10 @@ export const addProjectMember = async (
   });
 
   if (currentUserRole === "PROGRAM_MANAGER") {
-    whereQuery = { projectId, ...nestedPortfolioScope };
+    whereQuery = { id: projectId, ...nestedPortfolioScope };
   } else if (currentUserRole === "PROJECT_MANAGER") {
     whereQuery = {
-      projectId,
+      id: projectId,
       members: {
         some: {
           userId: currentUserId,
@@ -763,7 +763,6 @@ export const addProjectMember = async (
   // 1. CHECK IF PROJECT EXISTS
   const project = await prisma.project.findFirst({
     where: { 
-      id: projectId,
       ...whereQuery
     },
   });

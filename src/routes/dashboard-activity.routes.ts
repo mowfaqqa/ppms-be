@@ -16,7 +16,7 @@ const router = Router();
 /**
  * @route   GET /api/dashboard/stats
  * @desc    Get dashboard statistics (project counts, task counts, etc.)
- * @access  Private - Admin and Project Managers
+ * @access  Private - Admin, Project Managers and Program Managers
  */
 router.get(
   "/dashboard/stats",
@@ -90,62 +90,7 @@ router.get(
             programId: null
           }
         });
-
-        // NOT NEEDED
-        // Get task counts
-        const totalTasks = await prisma.task.count();
-        const activeTasks = await prisma.task.count({
-          where: {
-            status: { in: ["TODO", "IN_PROGRESS", "REVIEW"] },
-          },
-        });
-        const completedTasks = await prisma.task.count({
-          where: { status: "COMPLETED" },
-        });
-
-        // Get user count
-        const totalUsers = await prisma.user.count({
-          where: { isActive: true },
-        });
-
-        // Get projects by status
-        const projectsByStatus = await prisma.project.groupBy({
-          by: ["status"],
-          _count: { status: true },
-        });
-
-        const projectStatusMap = {
-          PLANNING: 0,
-          IN_PROGRESS: 0,
-          ON_HOLD: 0,
-          COMPLETED: 0,
-          CANCELLED: 0,
-        };
-
-        projectsByStatus.forEach((item: any) => {
-          projectStatusMap[item.status as keyof typeof projectStatusMap] =
-            item._count.status;
-        });
-
-        // Get tasks by status
-        const tasksByStatus = await prisma.task.groupBy({
-          by: ["status"],
-          _count: { status: true },
-        });
-
-        const taskStatusMap = {
-          TODO: 0,
-          IN_PROGRESS: 0,
-          REVIEW: 0,
-          COMPLETED: 0,
-        };
-
-        tasksByStatus.forEach((item: any) => {
-          taskStatusMap[item.status as keyof typeof taskStatusMap] =
-            item._count.status;
-        });
         
-
         dashboardDTO = {
           totalProjects,
           totalPrograms,
@@ -155,15 +100,8 @@ router.get(
           endedPortfolios, 
           totalPortfolios,
           totalStandaloneProjects,
-
-          totalTasks,
-          activeTasks,
-          completedTasks,
-          totalUsers,
-          projectsByStatus: projectStatusMap,
-          tasksByStatus: taskStatusMap,
         }
-      } else {
+      } else if (userRoles === "PROJECT_MANAGER") {
         // Find the projects where the user is a PROJECT_MANAGER
         const managedProjects = await prisma.projectMember.findMany({
           where: {
@@ -176,14 +114,6 @@ router.get(
         });
 
         const projectIds = managedProjects.map(p => p.projectId);
-
-        if (projectIds.length === 0) {
-          return {
-            totalProjects: 0,
-            totalTasks: 0,
-            totalFiles: 0,
-          };
-        }
 
         const [
           totalTasks,

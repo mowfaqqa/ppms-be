@@ -1,6 +1,6 @@
 import { PrismaClient, Portfolio } from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
-import { programManagerHasPortfolioAccess, getNestedPortfolioScope } from "../utils/check-access.util";
+import { programManagerHasPortfolioAccess, getNestedPortfolioScope, getPortfolioScope } from "../utils/check-access.util";
 import { Role } from "@prisma/client";
 const prisma = new PrismaClient();
 
@@ -65,12 +65,12 @@ export const getAllPortfolios = async (
     status?: string;
     search?: string;
 }) => {
-  const nestedPortfolioScope = getNestedPortfolioScope({
+  const portfolioScope = getPortfolioScope({
     role: role, 
     userId: userId, 
   });
 
-  const where: any = {...nestedPortfolioScope};
+  const where: any = {...portfolioScope};
   if (filters?.yearId) {
     where.yearId = filters.yearId;
   }
@@ -111,13 +111,13 @@ export const getPortfolioById = async (
   role: Role,
   userId: string
 ) => {
-  const nestedPortfolioScope = getNestedPortfolioScope({
+  const portfolioScope = getPortfolioScope({
     role: role, 
     userId: userId, 
   });
 
   const portfolio = await prisma.portfolio.findUnique({
-    where: { id, ...nestedPortfolioScope },
+    where: { id, ...portfolioScope },
     include: {
       programManagers: {
         select: { id: true}
@@ -202,14 +202,14 @@ export const updatePortfolio = async (
     }
   }
 
-  const nestedPortfolioScope = getNestedPortfolioScope({
+  const portfolioScope = getPortfolioScope({
     role: role, 
     userId: userId, 
   });
 
   // Check if portfolio exists
   const portfolio = await prisma.portfolio.findUnique({
-    where: { id, ...nestedPortfolioScope },
+    where: { id, ...portfolioScope },
     include: {
       year: true,
     },
@@ -286,14 +286,14 @@ export const deletePortfolio = async (
     }
   }
 
-  const nestedPortfolioScope = getNestedPortfolioScope({
+  const portfolioScope = getPortfolioScope({
     role: role, 
     userId: userId, 
   });
 
   // Check if portfolio exists
   const portfolio = await prisma.portfolio.findUnique({
-    where: { id, ...nestedPortfolioScope},
+    where: { id, ...portfolioScope},
     include: {
       _count: {
         select: {
@@ -335,14 +335,14 @@ export const getPortfolioStats = async (
     }
   }
 
-  const nestedPortfolioScope = getNestedPortfolioScope({
+  const portfolioScope = getPortfolioScope({
     role: role, 
     userId: userId, 
   });
 
   // Check if portfolio exists
   const portfolio = await prisma.portfolio.findUnique({
-    where: { id, ...nestedPortfolioScope },
+    where: { id, ...portfolioScope },
   });
 
   if (!portfolio) {
@@ -453,14 +453,14 @@ export const getAllPortfolioProjects = async (
     }
   }
 
-  const nestedPortfolioScope = getNestedPortfolioScope({
+  const portfolioScope = getPortfolioScope({
     role: role, 
     userId: userId, 
   });
 
   // Check if portfolio exists
   const portfolio = await prisma.portfolio.findUnique({
-    where: { id: portfolioId, ...nestedPortfolioScope },
+    where: { id: portfolioId, ...portfolioScope },
   });
 
   if (!portfolio) {
@@ -502,14 +502,14 @@ export const getAllPortfolioProjectsIncludingPrograms = async (
     }
   }
 
-  const nestedPortfolioScope = getNestedPortfolioScope({
+  const portfolioScope = getPortfolioScope({
     role: role, 
     userId: userId, 
   });
 
   // Check if portfolio exists
   const portfolio = await prisma.portfolio.findUnique({
-    where: { id: portfolioId, ...nestedPortfolioScope },
+    where: { id: portfolioId, ...portfolioScope },
   });
 
   if (!portfolio) {
@@ -556,14 +556,14 @@ export const getPortfolioPrograms = async (
     }
   }
 
-  const nestedPortfolioScope = getNestedPortfolioScope({
+  const portfolioScope = getPortfolioScope({
     role: role, 
     userId: userId, 
   });
   
   // Check if portfolio exists
   const portfolio = await prisma.portfolio.findUnique({
-    where: { id: portfolioId, ...nestedPortfolioScope },
+    where: { id: portfolioId, ...portfolioScope },
   });
 
   if (!portfolio) {

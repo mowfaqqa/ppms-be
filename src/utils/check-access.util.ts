@@ -70,6 +70,21 @@ export const getProjectScope = (user: { role: Role; userId: string }) => {
   return {}; // ADMIN
 }
 
+export const getNestedProjectScope = (user: { role: Role; userId: string }) => {
+  if (user.role === "PROJECT_MANAGER") {
+    return {
+      members: {
+        some: {
+          userId: user.userId,
+          role: "PROJECT_MANAGER",
+        },
+      },
+    };
+  }
+
+  return {}; // ADMIN
+}
+
 export const getTaskScope = (user: { role: Role; userId: string }) => {
   if (user.role === "PROGRAM_MANAGER") {
     return {

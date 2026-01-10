@@ -192,7 +192,6 @@ export const createTask = async (
     return task;
   });
 
-  // ✅ FIXED: Create notifications AFTER transaction completes
   if (assigneeIds.length > 0) {
     await Promise.all(
       assigneeIds.map(async (userId) => {
