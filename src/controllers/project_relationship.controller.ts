@@ -7,6 +7,7 @@ import {
   getRelatedProjects,
 } from "../services/project.service";
 import { ApiError, HttpStatus } from "../utils/error.utils";
+import { Role } from "@prisma/client";
 
 /**
  * POST /api/projects/:projectId/related

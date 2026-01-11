@@ -9,99 +9,139 @@ import {
   getActivityStats,
   getRecentActivitySummary,
 } from "../services/dashboard-activity.service";
+import { getPortfolioScope, getNestedPortfolioScope } from "../utils/check-access.util";
 
 const router = Router();
 
 /**
  * @route   GET /api/dashboard/stats
  * @desc    Get dashboard statistics (project counts, task counts, etc.)
- * @access  Private - Admin and Project Managers
+ * @access  Private - Admin, Project Managers and Program Managers
  */
 router.get(
   "/dashboard/stats",
   authenticate,
-  authorize(["ADMIN", "PROJECT_MANAGER"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
   asyncHandler(async (req: any, res: any) => {
     const { PrismaClient } = require("@prisma/client");
     const prisma = new PrismaClient();
+    const userRoles = req.user.role;
+    const userId = req.user.userId;
+    const now = new Date();
+    let dashboardDTO = {};
+
+    const portfolioScope = getPortfolioScope(req.user);
+    const nestedPortfolioScope = getNestedPortfolioScope(req.user);
 
     try {
-      // Get project counts
-      const totalProjects = await prisma.project.count();
-      const activeProjects = await prisma.project.count({
-        where: {
-          status: { in: ["PLANNING", "IN_PROGRESS"] },
-        },
-      });
-      const completedProjects = await prisma.project.count({
-        where: { status: "COMPLETED" },
-      });
+      // Admin DTO
+      if(userRoles === "ADMIN" || userRoles === "PROGRAM_MANAGER") {
+        // Get all portfolios count, active and ended
+        const [activePortfolios, endedPortfolios, totalPortfolios] = await Promise.all([
+          prisma.portfolio.count({
+            where: {
+              ...portfolioScope,
+              startDate: { lte: now },
+              endDate: { gte: now },
+            },
+          }),
+          prisma.portfolio.count({
+            where: {
+              ...portfolioScope,
+              endDate: { lt: now },
+            },
+          }),
+          prisma.portfolio.count({
+            where: portfolioScope
+          }),
+        ]);      
+  
+        // Get project counts
+        const totalProjects = await prisma.project.count({
+          where: {
+            ...nestedPortfolioScope,
+            programId: {
+              not: null
+            }
+          }
+        });
+        const activeProjects = await prisma.project.count({
+          where: {
+            ...nestedPortfolioScope,
+            status: { in: ["PLANNING", "IN_PROGRESS"] },
+          },
+        });
+        const completedProjects = await prisma.project.count({
+          where: { 
+            ...nestedPortfolioScope,
+            status: "COMPLETED" 
+          },
+        });
+  
+        // Get program count
+        const totalPrograms = await prisma.program.count({
+          where: nestedPortfolioScope
+        });
+  
+        //Get standalone projects
+        const totalStandaloneProjects = await prisma.project.count({
+          where: {
+            ...nestedPortfolioScope,
+            programId: null
+          }
+        });
+        
+        dashboardDTO = {
+          totalProjects,
+          totalPrograms,
+          activeProjects,
+          completedProjects,
+          activePortfolios, 
+          endedPortfolios, 
+          totalPortfolios,
+          totalStandaloneProjects,
+        }
+      } else if (userRoles === "PROJECT_MANAGER") {
+        // Find the projects where the user is a PROJECT_MANAGER
+        const managedProjects = await prisma.projectMember.findMany({
+          where: {
+            userId,
+            role: "PROJECT_MANAGER",
+          },
+          select: {
+            projectId: true,
+          },
+        });
 
-      // Get task counts
-      const totalTasks = await prisma.task.count();
-      const activeTasks = await prisma.task.count({
-        where: {
-          status: { in: ["TODO", "IN_PROGRESS", "REVIEW"] },
-        },
-      });
-      const completedTasks = await prisma.task.count({
-        where: { status: "COMPLETED" },
-      });
+        const projectIds = managedProjects.map(p => p.projectId);
 
-      // Get user count
-      const totalUsers = await prisma.user.count({
-        where: { isActive: true },
-      });
+        const [
+          totalTasks,
+          totalFiles,
+          totalTeamMembers
+        ] = await Promise.all([
+          prisma.task.count({ where: { projectId: { in: projectIds } } }),
+          prisma.file.count({ where: { projectId: { in: projectIds } } }),
+          prisma.projectMember.count({
+            where: {
+              projectId: { in: projectIds },
+              role: "TEAM_MEMBER",
+            },
+          })
+        ]);
 
-      // Get projects by status
-      const projectsByStatus = await prisma.project.groupBy({
-        by: ["status"],
-        _count: { status: true },
-      });
-
-      const projectStatusMap = {
-        PLANNING: 0,
-        IN_PROGRESS: 0,
-        ON_HOLD: 0,
-        COMPLETED: 0,
-        CANCELLED: 0,
-      };
-
-      projectsByStatus.forEach((item: any) => {
-        projectStatusMap[item.status as keyof typeof projectStatusMap] =
-          item._count.status;
-      });
-
-      // Get tasks by status
-      const tasksByStatus = await prisma.task.groupBy({
-        by: ["status"],
-        _count: { status: true },
-      });
-
-      const taskStatusMap = {
-        TODO: 0,
-        IN_PROGRESS: 0,
-        REVIEW: 0,
-        COMPLETED: 0,
-      };
-
-      tasksByStatus.forEach((item: any) => {
-        taskStatusMap[item.status as keyof typeof taskStatusMap] =
-          item._count.status;
-      });
+        dashboardDTO = {
+          totalProjects: projectIds.length,
+          totalTasks,
+          totalFiles,
+          totalTeamMembers
+        }
+      }
 
       res.status(200).json({
         success: true,
         data: {
-          totalProjects,
-          activeProjects,
-          completedProjects,
-          totalTasks,
-          activeTasks,
-          completedTasks,
-          totalUsers,
-          projectsByStatus: projectStatusMap,
-          tasksByStatus: taskStatusMap,
+         ...dashboardDTO
         },
       });
     } finally {

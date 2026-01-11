@@ -22,6 +22,7 @@ export const createUser = async (
     phoneNumber?: string;
     position?: string;
     role: Role;
+    portfolioIds: string[];
   },
   creatorId: string,
   ipAddress?: string,
@@ -57,20 +58,28 @@ export const createUser = async (
 
   // Create user in transaction
   const result = await prisma.$transaction(async (tx) => {
+    // create user data object to append portfolios if user is PROGRAM_MANAGER
+    const userData: any = {
+      name: data.name,
+      email: data.email,
+      password: hashedPassword,
+      staffId: data.staffId,
+      department: data.department,
+      role: data.role,
+      isActive: true,
+      temporaryPassword: true,
+      joiningDate: new Date(),
+      createdById: creatorId,
+    };
+
+    if (data.role === "PROGRAM_MANAGER" && data.portfolioIds?.length) {
+      userData.managedPortfolios = {
+        connect: data.portfolioIds.map((id) => ({ id })),
+      };
+    }
     // Create user
     const user = await tx.user.create({
-      data: {
-        name: data.name,
-        email: data.email,
-        password: hashedPassword,
-        staffId: data.staffId,
-        department: data.department,
-        role: data.role,
-        isActive: true,
-        temporaryPassword: true,
-        joiningDate: new Date(),
-        createdById: creatorId,
-      },
+      data: userData,
       select: {
         id: true,
         name: true,
@@ -82,6 +91,7 @@ export const createUser = async (
         joiningDate: true,
         createdAt: true,
         updatedAt: true,
+        managedPortfolios: true
       },
     });
 
@@ -231,6 +241,19 @@ export const getUserDetails = async (userId: string) => {
           email: true,
         },
       },
+      managedPortfolios: {
+        select: {
+          id: true,
+          name: true,
+          yearId: true,
+          description: true,
+          programs: true,
+          projects: true,
+          startDate: true,
+          endDate: true,
+          status: true,
+        },
+      },
       projects: {
         include: {
           project: {
@@ -283,6 +306,7 @@ export const updateUserSettings = async (
     phoneNumber?: string;
     position?: string;
     role?: Role;
+    portfolioIds?: string[];
   },
   updaterId: string,
   ipAddress?: string,
@@ -291,6 +315,9 @@ export const updateUserSettings = async (
   // Check if user exists
   const existingUser = await prisma.user.findUnique({
     where: { id: userId },
+    include: {
+      managedPortfolios: { select: { id: true } },
+    },
   });
 
   if (!existingUser) {
@@ -356,6 +383,28 @@ export const updateUserSettings = async (
     changes.new.role = data.role;
   }
 
+  // determine new and deleted PROGRAM_MANAGER porfolioIds
+  let portfolioConnect: { id: string }[] = [];
+  let portfolioDisconnect: { id: string }[] = [];
+
+  if (data.portfolioIds && existingUser.managedPortfolios) {
+    const currentIds = existingUser.managedPortfolios.map((p) => p.id);
+    const newIds = data.portfolioIds;
+
+    portfolioConnect = newIds
+      .filter((id: string) => !currentIds.includes(id))
+      .map((id: string) => ({ id }));
+
+    portfolioDisconnect = currentIds
+      .filter((id: string) => !newIds.includes(id))
+      .map((id: string) => ({ id }));
+
+    if (portfolioConnect.length > 0 || portfolioDisconnect.length > 0) {
+      changes.old.managedPortfolios = currentIds;
+      changes.new.managedPortfolios = newIds;
+    }
+  }
+
   // Update user in transaction
   const user = await prisma.$transaction(async (tx) => {
     const updated = await tx.user.update({
@@ -366,6 +415,10 @@ export const updateUserSettings = async (
         staffId: data.staffId,
         department: data.department,
         role: data.role,
+        managedPortfolios: {
+          connect: portfolioConnect,
+          disconnect: portfolioDisconnect,
+        },
       },
       select: {
         id: true,
@@ -378,6 +431,7 @@ export const updateUserSettings = async (
         joiningDate: true,
         createdAt: true,
         updatedAt: true,
+        managedPortfolios: true
       },
     });
 
@@ -428,6 +482,7 @@ export const deleteUser = async (
       email: true,
       staffId: true,
       role: true,
+      managedPortfolios: true
     },
   });
 
@@ -472,6 +527,17 @@ export const deleteUser = async (
       where: { userId },
     });
 
+    // delete managed portfolios if PROGRAM_MANAGER
+    if (user.managedPortfolios.length > 0) {
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          managedPortfolios: {
+            set: [], // disconnect all portfolios
+          },
+        },
+      });
+    }
     // Create audit log
     await tx.auditLog.create({
       data: {

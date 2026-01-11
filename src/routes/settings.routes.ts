@@ -58,7 +58,7 @@ router.post(
     validate,
   ],
   asyncHandler(async (req: any, res: any) => {
-    const { name, email, staffId, department, phoneNumber, position, role } =
+    const { name, email, staffId, department, phoneNumber, position, role, portfolioIds } =
       req.body;
 
     const ipAddress = req.ip || req.connection.remoteAddress;
@@ -73,6 +73,7 @@ router.post(
         phoneNumber: phoneNumber?.trim(),
         position: position?.trim(),
         role: role as Role,
+        portfolioIds: Array.isArray(portfolioIds) ? portfolioIds : [],
       },
       req.user!.userId,
       ipAddress,
@@ -95,7 +96,7 @@ router.post(
 router.get(
   "/users",
   authenticate,
-  authorize(["ADMIN"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
   [
     check("role", "Invalid role")
       .optional()
@@ -194,12 +195,12 @@ router.put(
       .isLength({ max: 100 }),
     check("role", "Role must be ADMIN, PROJECT_MANAGER, or TEAM_MEMBER")
       .optional()
-      .isIn(["ADMIN", "PROJECT_MANAGER", "TEAM_MEMBER"]),
+      .isIn(["ADMIN", "PROJECT_MANAGER", "TEAM_MEMBER", "PROGRAM_MANAGER"]),
     validate,
   ],
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
-    const { name, email, staffId, department, phoneNumber, position, role } =
+    const { name, email, staffId, department, phoneNumber, position, role, portfolioIds } =
       req.body;
 
     const ipAddress = req.ip || req.connection.remoteAddress;
@@ -215,6 +216,7 @@ router.put(
         phoneNumber: phoneNumber?.trim(),
         position: position?.trim(),
         role: role as Role,
+        portfolioIds: Array.isArray(portfolioIds) ? portfolioIds : [],
       },
       req.user!.userId,
       ipAddress,

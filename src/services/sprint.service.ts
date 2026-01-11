@@ -1,5 +1,6 @@
-import { PrismaClient, Sprint, SprintStatus, Task } from "@prisma/client";
+import { PrismaClient, Role, Sprint, SprintStatus, Task } from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
+import { getTaskScope } from "../utils/check-access.util";
 
 const prisma = new PrismaClient();
 
@@ -109,18 +110,48 @@ export const createSprint = async (
 // Get all sprints for a project
 export const getProjectSprints = async (
   projectId: string,
-  status?: SprintStatus
+  status?: SprintStatus,
+  user?: { role: Role, userId: string }
 ): Promise<any[]> => {
   // Check if project exists
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
+  const sprintScope = getTaskScope(user);
+
+  // First: verify project exists AND user has access
+  const project = await prisma.project.findFirst({
+    where: {
+      id: projectId,
+      ...(user.role === "PROGRAM_MANAGER"
+        ? {
+            portfolio: {
+              programManagers: {
+                some: { id: user.userId },
+              },
+            },
+          }
+        : user.role === "PROJECT_MANAGER"
+        ? {
+            members: {
+              some: {
+                userId: user.userId,
+                role: "PROJECT_MANAGER",
+              },
+            },
+          }
+        : {}),
+    },
+    select: { id: true },
   });
 
   if (!project) {
-    throw new ApiError(HttpStatus.NOT_FOUND, "Project not found");
+    throw new ApiError(HttpStatus.NOT_FOUND, "Project not found or access denied");
   }
 
-  const where: any = { projectId };
+  // Now fetch sprints safely
+  const where: any = {
+    projectId: project.id,
+    ...sprintScope,
+  };
+
   if (status) {
     where.status = status;
   }

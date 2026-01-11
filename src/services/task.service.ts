@@ -1,9 +1,10 @@
-import { PrismaClient, Task, TaskStatus, Priority } from "@prisma/client";
+import { PrismaClient, Task, TaskStatus, Priority, Role } from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
 import {
   notifyTaskAssignment,
   notifyTaskStatusChange,
 } from "./notification.service";
+import { getTaskScope } from "../utils/check-access.util";
 
 const prisma = new PrismaClient();
 
@@ -191,7 +192,6 @@ export const createTask = async (
     return task;
   });
 
-  // ✅ FIXED: Create notifications AFTER transaction completes
   if (assigneeIds.length > 0) {
     await Promise.all(
       assigneeIds.map(async (userId) => {
@@ -971,8 +971,13 @@ export const getAllTasks = async (filters?: {
   assigneeId?: string;
   parentTaskId?: string | null;
   search?: string;
+}, user?: {
+  role: Role
+  userId: string;
 }): Promise<any[]> => {
-  const where: any = {};
+  const tasksScope = getTaskScope(user);
+
+  const where: any = { ...tasksScope };
 
   if (filters?.projectId) {
     where.projectId = filters.projectId;
@@ -1811,9 +1816,16 @@ export const createTaskComment = async (
 };
 
 // Get task comments
-export const getTaskComments = async (taskId: string): Promise<any[]> => {
+export const getTaskComments = async (
+  taskId: string,
+  user: {
+    userId: string;
+    role: Role;
+  }
+): Promise<any[]> => {
+  const taskScope = getTaskScope(user);
   const comments = await prisma.taskComment.findMany({
-    where: { taskId },
+    where: { taskId, ...taskScope },
     include: {
       author: {
         select: {

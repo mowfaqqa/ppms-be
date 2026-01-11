@@ -26,6 +26,7 @@ model User {
   department  String? // Department name (free text)
   joiningDate DateTime @default(now())
   isActive    Boolean  @default(true)
+  managedPortfolios  Portfolio[] @relation("ProgramManagerPortfolios")
 
   // Password management
   temporaryPassword      Boolean           @default(false) // Flag for temp password
@@ -70,6 +71,9 @@ model Portfolio {
   name        String
   yearId      String
   year        Year      @relation(fields: [yearId], references: [id], onDelete: Cascade)
+
+  programManagers    User[]    @relation("ProgramManagerPortfolios")
+
   description String?
   programs    Program[]
   projects    Project[]

@@ -1,6 +1,7 @@
 import { PrismaClient, Portfolio } from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
-
+import { programManagerHasPortfolioAccess, getNestedPortfolioScope, getPortfolioScope } from "../utils/check-access.util";
+import { Role } from "@prisma/client";
 const prisma = new PrismaClient();
 
 /**
@@ -56,13 +57,20 @@ export const createPortfolio = async (data: {
 /**
  * Get all portfolios with optional filters
  */
-export const getAllPortfolios = async (filters?: {
-  yearId?: string;
-  status?: string;
-  search?: string;
+export const getAllPortfolios = async (
+  userId: string, 
+  role?: Role,
+  filters?: {
+    yearId?: string;
+    status?: string;
+    search?: string;
 }) => {
-  const where: any = {};
+  const portfolioScope = getPortfolioScope({
+    role: role, 
+    userId: userId, 
+  });
 
+  const where: any = {...portfolioScope};
   if (filters?.yearId) {
     where.yearId = filters.yearId;
   }
@@ -98,10 +106,22 @@ export const getAllPortfolios = async (filters?: {
 /**
  * Get portfolio by ID
  */
-export const getPortfolioById = async (id: string) => {
+export const getPortfolioById = async (
+  id: string,
+  role: Role,
+  userId: string
+) => {
+  const portfolioScope = getPortfolioScope({
+    role: role, 
+    userId: userId, 
+  });
+
   const portfolio = await prisma.portfolio.findUnique({
-    where: { id },
+    where: { id, ...portfolioScope },
     include: {
+      programManagers: {
+        select: { id: true}
+      },
       year: true,
       programs: {
         include: {
@@ -145,6 +165,16 @@ export const getPortfolioById = async (id: string) => {
     throw new ApiError(HttpStatus.NOT_FOUND, "Portfolio not found");
   }
 
+  if (role === "PROGRAM_MANAGER") {
+    const hasAccess = portfolio.programManagers.some((m) => m.id === userId);
+    if (!hasAccess) {
+      throw new ApiError(HttpStatus.FORBIDDEN, "You don't have access to this portfolio");
+    }
+  }
+
+  // Optionally remove programManagers from payload
+  delete portfolio.programManagers;
+
   return portfolio;
 };
 
@@ -160,11 +190,26 @@ export const updatePortfolio = async (
     startDate?: Date;
     endDate?: Date;
     status?: string;
-  }
+  },
+  role?: Role,
+  userId?: string,
 ): Promise<Portfolio> => {
+
+  if (role === "PROGRAM_MANAGER") {
+    const hasAccess = await programManagerHasPortfolioAccess(userId!, id);
+    if (!hasAccess) {
+      throw new ApiError(HttpStatus.FORBIDDEN, "You do not have access to this portfolio");
+    }
+  }
+
+  const portfolioScope = getPortfolioScope({
+    role: role, 
+    userId: userId, 
+  });
+
   // Check if portfolio exists
   const portfolio = await prisma.portfolio.findUnique({
-    where: { id },
+    where: { id, ...portfolioScope },
     include: {
       year: true,
     },
@@ -229,10 +274,26 @@ export const updatePortfolio = async (
  * Delete portfolio
  * Note: This will cascade delete all programs, projects, and tasks under this portfolio
  */
-export const deletePortfolio = async (id: string): Promise<void> => {
+export const deletePortfolio = async (
+  id: string,
+  role?: Role,
+  userId?: string
+): Promise<void> => {
+  if (role === "PROGRAM_MANAGER") {
+    const hasAccess = await programManagerHasPortfolioAccess(userId!, id);
+    if (!hasAccess) {
+      throw new ApiError(HttpStatus.FORBIDDEN, "You do not have access to this portfolio");
+    }
+  }
+
+  const portfolioScope = getPortfolioScope({
+    role: role, 
+    userId: userId, 
+  });
+
   // Check if portfolio exists
   const portfolio = await prisma.portfolio.findUnique({
-    where: { id },
+    where: { id, ...portfolioScope},
     include: {
       _count: {
         select: {
@@ -262,10 +323,26 @@ export const deletePortfolio = async (id: string): Promise<void> => {
 /**
  * Get portfolio stats
  */
-export const getPortfolioStats = async (id: string) => {
+export const getPortfolioStats = async (
+  id: string,
+  role?: Role,
+  userId?: string
+) => {
+  if (role === "PROGRAM_MANAGER") {
+    const hasAccess = await programManagerHasPortfolioAccess(userId!, id);
+    if (!hasAccess) {
+      throw new ApiError(HttpStatus.FORBIDDEN, "You do not have access to this portfolio");
+    }
+  }
+
+  const portfolioScope = getPortfolioScope({
+    role: role, 
+    userId: userId, 
+  });
+
   // Check if portfolio exists
   const portfolio = await prisma.portfolio.findUnique({
-    where: { id },
+    where: { id, ...portfolioScope },
   });
 
   if (!portfolio) {
@@ -364,10 +441,26 @@ export const getPortfolioStats = async (id: string) => {
 /**
  * Get all portfolio projects (standalone only)
  */
-export const getAllPortfolioProjects = async (portfolioId: string) => {
+export const getAllPortfolioProjects = async (
+  portfolioId: string,
+  role?: Role,
+  userId?: string
+) => {
+  if (role === "PROGRAM_MANAGER") {
+    const hasAccess = await programManagerHasPortfolioAccess(userId!, portfolioId);
+    if (!hasAccess) {
+      throw new ApiError(HttpStatus.FORBIDDEN, "You do not have access to this portfolio");
+    }
+  }
+
+  const portfolioScope = getPortfolioScope({
+    role: role, 
+    userId: userId, 
+  });
+
   // Check if portfolio exists
   const portfolio = await prisma.portfolio.findUnique({
-    where: { id: portfolioId },
+    where: { id: portfolioId, ...portfolioScope },
   });
 
   if (!portfolio) {
@@ -398,11 +491,25 @@ export const getAllPortfolioProjects = async (portfolioId: string) => {
  * Get all projects under portfolio (including those in programs)
  */
 export const getAllPortfolioProjectsIncludingPrograms = async (
-  portfolioId: string
+  portfolioId: string,
+  role?: Role,
+  userId?: string
 ) => {
+  if (role === "PROGRAM_MANAGER") {
+    const hasAccess = await programManagerHasPortfolioAccess(userId!, portfolioId);
+    if (!hasAccess) {
+      throw new ApiError(HttpStatus.FORBIDDEN, "You do not have access to this portfolio");
+    }
+  }
+
+  const portfolioScope = getPortfolioScope({
+    role: role, 
+    userId: userId, 
+  });
+
   // Check if portfolio exists
   const portfolio = await prisma.portfolio.findUnique({
-    where: { id: portfolioId },
+    where: { id: portfolioId, ...portfolioScope },
   });
 
   if (!portfolio) {
@@ -437,10 +544,26 @@ export const getAllPortfolioProjectsIncludingPrograms = async (
 /**
  * Get all programs for a portfolio
  */
-export const getPortfolioPrograms = async (portfolioId: string) => {
+export const getPortfolioPrograms = async (
+  portfolioId: string,
+  role?: Role,
+  userId?: string
+) => {
+  if (role === "PROGRAM_MANAGER") {
+    const hasAccess = await programManagerHasPortfolioAccess(userId!, portfolioId);
+    if (!hasAccess) {
+      throw new ApiError(HttpStatus.FORBIDDEN, "You do not have access to this portfolio");
+    }
+  }
+
+  const portfolioScope = getPortfolioScope({
+    role: role, 
+    userId: userId, 
+  });
+  
   // Check if portfolio exists
   const portfolio = await prisma.portfolio.findUnique({
-    where: { id: portfolioId },
+    where: { id: portfolioId, ...portfolioScope },
   });
 
   if (!portfolio) {
