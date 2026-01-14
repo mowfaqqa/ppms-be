@@ -537,11 +537,11 @@ router.get(
  * @access  Private - Admin, Program Manager, Project Manager
  */
 router.get(
-  "/projects/stats",
+  "/dashboard/projects/stats",
   authenticate,
   authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
   asyncHandler(async (req: any, res: any) => {
-    const { PrismaClient } = require("@prisma/client");
+     const { PrismaClient } = require("@prisma/client");
     const prisma = new PrismaClient();
     const userRole = req.user.role;
     const userId = req.user.userId;
@@ -564,30 +564,81 @@ router.get(
         whereClause = { id: { in: projectIds.map((p: any) => p.projectId) } };
       }
 
-      // Get status distribution
-      const statusDistribution = await prisma.project.groupBy({
-        by: ["status"],
+      // Get all projects with details
+      const projects = await prisma.project.findMany({
         where: whereClause,
-        _count: { status: true },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          status: true,
+          startDate: true,
+          endDate: true,
+          _count: {
+            select: {
+              tasks: true,
+            },
+          },
+          portfolio: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          program: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
       });
 
-      const result = {
-        PLANNING: 0,
-        IN_PROGRESS: 0,
-        ON_HOLD: 0,
-        COMPLETED: 0,
-        CANCELLED: 0,
+      // Group projects by status
+      const projectsByStatus: any = {
+        PLANNING: [],
+        IN_PROGRESS: [],
+        ON_HOLD: [],
+        COMPLETED: [],
+        CANCELLED: [],
       };
 
-      statusDistribution.forEach((item: any) => {
-        result[item.status as keyof typeof result] = item._count.status;
+      projects.forEach((project) => {
+        projectsByStatus[project.status].push({
+          id: project.id,
+          name: project.name,
+          description: project.description,
+          status: project.status,
+          startDate: project.startDate,
+          endDate: project.endDate,
+          taskCount: project._count.tasks,
+          portfolio: project.portfolio,
+          program: project.program,
+        });
       });
+
+      // Get status distribution counts
+      const statusDistribution = {
+        PLANNING: projectsByStatus.PLANNING.length,
+        IN_PROGRESS: projectsByStatus.IN_PROGRESS.length,
+        ON_HOLD: projectsByStatus.ON_HOLD.length,
+        COMPLETED: projectsByStatus.COMPLETED.length,
+        CANCELLED: projectsByStatus.CANCELLED.length,
+      };
 
       res.status(200).json({
         success: true,
         data: {
-          statusDistribution: result,
-          total: Object.values(result).reduce((a, b) => a + b, 0),
+          statusDistribution,
+          projectsByStatus,
+          total: projects.length,
+          summary: {
+            totalProjects: projects.length,
+            totalTasks: projects.reduce((sum, p) => sum + p._count.tasks, 0),
+          },
         },
       });
     } finally {
@@ -602,11 +653,11 @@ router.get(
  * @access  Private - Admin, Program Manager, Project Manager
  */
 router.get(
-  "/tasks/stats",
+  "/dashboard/tasks/stats",
   authenticate,
   authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
   asyncHandler(async (req: any, res: any) => {
-    const { PrismaClient } = require("@prisma/client");
+   const { PrismaClient } = require("@prisma/client");
     const prisma = new PrismaClient();
     const userRole = req.user.role;
     const userId = req.user.userId;
@@ -629,29 +680,105 @@ router.get(
         whereClause = { projectId: { in: projectIds.map((p: any) => p.projectId) } };
       }
 
-      // Get status distribution
-      const statusDistribution = await prisma.task.groupBy({
-        by: ["status"],
+      // Get all tasks with details
+      const tasks = await prisma.task.findMany({
         where: whereClause,
-        _count: { status: true },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          status: true,
+          priority: true,
+          startDate: true,
+          endDate: true,
+          project: {
+            select: {
+              id: true,
+              name: true,
+              portfolio: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+              program: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          assignments: {
+            select: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+            // REMOVED: take: 3 - not supported in nested select
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
       });
 
-      const result = {
-        TODO: 0,
-        IN_PROGRESS: 0,
-        REVIEW: 0,
-        COMPLETED: 0,
+      // Group tasks by status
+      const tasksByStatus: any = {
+        TODO: [],
+        IN_PROGRESS: [],
+        REVIEW: [],
+        COMPLETED: [],
       };
 
-      statusDistribution.forEach((item: any) => {
-        result[item.status as keyof typeof result] = item._count.status;
+      tasks.forEach((task: any) => {
+        tasksByStatus[task.status].push({
+          id: task.id,
+          title: task.title,
+          description: task.description,
+          status: task.status,
+          priority: task.priority,
+          startDate: task.startDate,
+          endDate: task.endDate,
+          project: task.project,
+          // CHANGED: Limit to 3 assignees in JavaScript instead
+          assignees: task.assignments.slice(0, 3).map((a: any) => a.user),
+        });
       });
+
+      // Get status distribution counts
+      const statusDistribution = {
+        TODO: tasksByStatus.TODO.length,
+        IN_PROGRESS: tasksByStatus.IN_PROGRESS.length,
+        REVIEW: tasksByStatus.REVIEW.length,
+        COMPLETED: tasksByStatus.COMPLETED.length,
+      };
+
+      // Calculate completion metrics
+      const totalTasks = tasks.length;
+      const completedTasks = tasksByStatus.COMPLETED.length;
+      const completionRate = totalTasks > 0 
+        ? ((completedTasks / totalTasks) * 100).toFixed(1) 
+        : "0";
 
       res.status(200).json({
         success: true,
         data: {
-          statusDistribution: result,
-          total: Object.values(result).reduce((a, b) => a + b, 0),
+          statusDistribution,
+          tasksByStatus,
+          total: totalTasks,
+          summary: {
+            totalTasks,
+            completedTasks,
+            completionRate: parseFloat(completionRate),
+            inProgressTasks: tasksByStatus.IN_PROGRESS.length,
+            todoTasks: tasksByStatus.TODO.length,
+            reviewTasks: tasksByStatus.REVIEW.length,
+          },
         },
       });
     } finally {
