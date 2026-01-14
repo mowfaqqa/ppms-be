@@ -102,7 +102,6 @@ router.get(
           totalStandaloneProjects,
         }
       } else if (userRoles === "PROJECT_MANAGER") {
-        // Find the projects where the user is a PROJECT_MANAGER
         const managedProjects = await prisma.projectMember.findMany({
           where: {
             userId,
@@ -112,13 +111,15 @@ router.get(
             projectId: true,
           },
         });
-
+      
         const projectIds = managedProjects.map(p => p.projectId);
-
+      
         const [
           totalTasks,
           totalFiles,
-          totalTeamMembers
+          totalTeamMembers,
+          projectsByStatus,
+          tasksByStatus
         ] = await Promise.all([
           prisma.task.count({ where: { projectId: { in: projectIds } } }),
           prisma.file.count({ where: { projectId: { in: projectIds } } }),
@@ -127,14 +128,52 @@ router.get(
               projectId: { in: projectIds },
               role: "TEAM_MEMBER",
             },
-          })
+          }),
+          // Add project status distribution
+          prisma.project.groupBy({
+            by: ["status"],
+            where: { id: { in: projectIds } },
+            _count: { status: true },
+          }),
+          // Add task status distribution
+          prisma.task.groupBy({
+            by: ["status"],
+            where: { projectId: { in: projectIds } },
+            _count: { status: true },
+          }),
         ]);
-
+      
+        const projectStatusMap = {
+          PLANNING: 0,
+          IN_PROGRESS: 0,
+          ON_HOLD: 0,
+          COMPLETED: 0,
+          CANCELLED: 0,
+        };
+      
+        projectsByStatus.forEach((item: any) => {
+          projectStatusMap[item.status as keyof typeof projectStatusMap] = item._count.status;
+        });
+      
+        const taskStatusMap = {
+          TODO: 0,
+          IN_PROGRESS: 0,
+          REVIEW: 0,
+          COMPLETED: 0,
+        };
+      
+        tasksByStatus.forEach((item: any) => {
+          taskStatusMap[item.status as keyof typeof taskStatusMap] = item._count.status;
+        });
+      
         dashboardDTO = {
           totalProjects: projectIds.length,
+          activeProjects: projectIds.length, 
           totalTasks,
           totalFiles,
-          totalTeamMembers
+          totalTeamMembers,
+          projectsByStatus: projectStatusMap,
+          tasksByStatus: taskStatusMap,
         }
       }
 
@@ -158,7 +197,7 @@ router.get(
 router.get(
   "/dashboard/activities",
   authenticate,
-  authorize(["ADMIN", "PROJECT_MANAGER"]),
+  authorize(["ADMIN", "PROJECT_MANAGER", "PROGRAM_MANAGER"]),
   [
     check("userId", "Invalid user ID format").optional(),
     check("entityType", "Invalid entity type")
@@ -239,7 +278,7 @@ router.get(
 router.get(
   "/dashboard/activities/stats",
   authenticate,
-  authorize(["ADMIN", "PROJECT_MANAGER"]),
+  authorize(["ADMIN", "PROJECT_MANAGER", "PROGRAM_MANAGER"]),
   [
     check("timeframe", "Invalid timeframe")
       .optional()
@@ -270,7 +309,7 @@ router.get(
 router.get(
   "/dashboard/activities/recent",
   authenticate,
-  authorize(["ADMIN", "PROJECT_MANAGER"]),
+  authorize(["ADMIN", "PROJECT_MANAGER","PROGRAM_MANAGER"]),
   asyncHandler(async (req: any, res: any) => {
     const summary = await getRecentActivitySummary(
       req.user!.userId,
@@ -489,6 +528,135 @@ router.get(
       pagination: result.pagination,
       summary: result.summary,
     });
+  })
+);
+
+/**
+ * @route   GET /api/projects/stats
+ * @desc    Get project statistics by status (role-filtered)
+ * @access  Private - Admin, Program Manager, Project Manager
+ */
+router.get(
+  "/projects/stats",
+  authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
+  asyncHandler(async (req: any, res: any) => {
+    const { PrismaClient } = require("@prisma/client");
+    const prisma = new PrismaClient();
+    const userRole = req.user.role;
+    const userId = req.user.userId;
+
+    try {
+      let whereClause: any = {};
+
+      // Apply role-based filtering
+      if (userRole === "PROGRAM_MANAGER") {
+        const nestedPortfolioScope = getNestedPortfolioScope(req.user);
+        whereClause = nestedPortfolioScope;
+      } else if (userRole === "PROJECT_MANAGER") {
+        const projectIds = await prisma.projectMember.findMany({
+          where: { 
+            userId,
+            role: "PROJECT_MANAGER"
+          },
+          select: { projectId: true },
+        });
+        whereClause = { id: { in: projectIds.map((p: any) => p.projectId) } };
+      }
+
+      // Get status distribution
+      const statusDistribution = await prisma.project.groupBy({
+        by: ["status"],
+        where: whereClause,
+        _count: { status: true },
+      });
+
+      const result = {
+        PLANNING: 0,
+        IN_PROGRESS: 0,
+        ON_HOLD: 0,
+        COMPLETED: 0,
+        CANCELLED: 0,
+      };
+
+      statusDistribution.forEach((item: any) => {
+        result[item.status as keyof typeof result] = item._count.status;
+      });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          statusDistribution: result,
+          total: Object.values(result).reduce((a, b) => a + b, 0),
+        },
+      });
+    } finally {
+      await prisma.$disconnect();
+    }
+  })
+);
+
+/**
+ * @route   GET /api/tasks/stats
+ * @desc    Get task statistics by status (role-filtered)
+ * @access  Private - Admin, Program Manager, Project Manager
+ */
+router.get(
+  "/tasks/stats",
+  authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
+  asyncHandler(async (req: any, res: any) => {
+    const { PrismaClient } = require("@prisma/client");
+    const prisma = new PrismaClient();
+    const userRole = req.user.role;
+    const userId = req.user.userId;
+
+    try {
+      let whereClause: any = {};
+
+      // Apply role-based filtering
+      if (userRole === "PROGRAM_MANAGER") {
+        const nestedPortfolioScope = getNestedPortfolioScope(req.user);
+        whereClause = { project: nestedPortfolioScope };
+      } else if (userRole === "PROJECT_MANAGER") {
+        const projectIds = await prisma.projectMember.findMany({
+          where: { 
+            userId,
+            role: "PROJECT_MANAGER"
+          },
+          select: { projectId: true },
+        });
+        whereClause = { projectId: { in: projectIds.map((p: any) => p.projectId) } };
+      }
+
+      // Get status distribution
+      const statusDistribution = await prisma.task.groupBy({
+        by: ["status"],
+        where: whereClause,
+        _count: { status: true },
+      });
+
+      const result = {
+        TODO: 0,
+        IN_PROGRESS: 0,
+        REVIEW: 0,
+        COMPLETED: 0,
+      };
+
+      statusDistribution.forEach((item: any) => {
+        result[item.status as keyof typeof result] = item._count.status;
+      });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          statusDistribution: result,
+          total: Object.values(result).reduce((a, b) => a + b, 0),
+        },
+      });
+    } finally {
+      await prisma.$disconnect();
+    }
   })
 );
 
