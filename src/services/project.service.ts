@@ -177,49 +177,40 @@ export const getAllProjects = async (
   const projectScope = getNestedProjectScope(user);
   let where: any = {};
 
+  if (filters?.standalone) {
+    where.programId = null;
+  } else {
+    where.programId = { not: null };
+  }
+
   if (user.role === "PROGRAM_MANAGER") {
-    where = { ...nestedPortfolioScope };
+    where = { ...where, ...nestedPortfolioScope };
   } else if (user.role === "PROJECT_MANAGER") {
-    where = { ...projectScope };
+    where = { ...where, ...projectScope };
   }
   
   if (filters?.portfolioId) {
-    where = {
-      ...where,
-      portfolioId: filters.portfolioId,
-    };
+    where.portfolioId = filters.portfolioId;
   }
   
   if (filters?.programId) {
-    where = {
-      ...where,
-      programId: filters.programId,
-    };
-  }
-  
-  // Standalone projects
-  if (filters?.standalone === true) {
-    where = {
-      ...where,
-      programId: null,
-    };
+    where.programId = filters.programId;
   }
   
   if (filters?.status) {
-    where = {
-      ...where,
-      status: filters.status,
-    };
+    where.status = filters.status;
   }
   
   if (filters?.search) {
-    where = {
-      ...where,
+    where.AND = [
+    ...(where.AND || []),
+    {
       OR: [
         { name: { contains: filters.search, mode: "insensitive" } },
         { description: { contains: filters.search, mode: "insensitive" } },
       ],
-    };
+    },
+  ];
   }
 
   return prisma.project.findMany({

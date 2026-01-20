@@ -136,7 +136,7 @@ router.get(
   "/",
   authenticate,
   asyncHandler(async (req: any, res: any) => {
-    const { portfolioId, status, search } = req.query;
+    const { portfolioId, status, search, standalone } = req.query;
 
     const projects = await getAllProjects(
       {
@@ -147,6 +147,7 @@ router.get(
       portfolioId: portfolioId as string,
       status: status as any,
       search: search as string,
+      standalone: standalone as boolean
       }
     );
 

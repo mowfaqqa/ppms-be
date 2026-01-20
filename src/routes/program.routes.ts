@@ -112,11 +112,18 @@ router.get(
 router.get(
   "/:id",
   authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER"]),
   checkProgramPermission(),
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
-    const program = await getProgramById(id);
+    const program = await getProgramById(
+      id,
+      {
+        userRole: req.user.role,
+        userId: req.user.userId,
+      }
+    );
 
     res.status(200).json({
       success: true,
