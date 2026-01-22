@@ -97,7 +97,6 @@ export const getYearById = async (
     userId: string
   }) => {
   let portfolioWhere: any = {};
-  console.log('here i am');
   const nestedPortfolio = getPortfolioScope({ role: user.userRole, userId: user.userId});
 
   if (user.userRole === "PROGRAM_MANAGER") {
@@ -127,8 +126,6 @@ export const getYearById = async (
   if (!year) {
     throw new ApiError(HttpStatus.NOT_FOUND, "Year not found");
   }
-
-  console.log(year)
 
   return year;
 };
