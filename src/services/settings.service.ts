@@ -4,6 +4,8 @@ import { ApiError, HttpStatus } from "../utils/error.utils";
 import {
   generateTemporaryPassword,
   sendUserCreatedEmail,
+  sendAccountDeactivatedEmail,
+  sendAccountReactivatedEmail
 } from "../utils/email.utils";
 
 const prisma = new PrismaClient();
@@ -111,16 +113,16 @@ export const createUser = async (
   });
 
   // Send welcome email with temporary password
-  // try {
-  //   await sendUserCreatedEmail(
-  //     result.user.email,
-  //     result.user.name,
-  //     result.temporaryPassword
-  //   );
-  // } catch (error) {
-  //   console.error("Failed to send user creation email:", error);
-  //   // Don't fail the entire operation if email fails
-  // }
+  try {
+    await sendUserCreatedEmail(
+      result.user.email,
+      result.user.name,
+      result.temporaryPassword
+    );
+  } catch (error) {
+    console.error("Failed to send user creation email:", error);
+    // Don't fail the entire operation if email fails
+  }
 
   return result.user;
 };
@@ -608,6 +610,16 @@ export const deleteUser = async (
       },
     });
   });
+
+  // Send deactivation email with 
+  try {
+    await sendAccountDeactivatedEmail(
+      user.email,
+      user.name,
+    );
+  } catch (error) {
+    console.error("Failed to send user deactivation email:", error);
+  }
 };
 
 /**
@@ -654,6 +666,16 @@ export const reactivateUser = async (
       },
     });
   });
+
+  // Send reactivation email with 
+  try {
+    await sendAccountDeactivatedEmail(
+      user.email,
+      user.name,
+    );
+  } catch (error) {
+    console.error("Failed to send user reactivation email:", error);
+  }
 
   return getUserDetails(userId);
 };

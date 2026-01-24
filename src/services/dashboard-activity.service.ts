@@ -1,5 +1,6 @@
 import { PrismaClient, Role } from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
+import { getNestedPortfolioScope, getPortfolioScope } from "../utils/check-access.util";
 
 const prisma = new PrismaClient();
 
@@ -723,5 +724,154 @@ export const getRecentActivitySummary = async (
   return {
     recentActivities: result.activities,
     summary: result.summary,
+  };
+};
+
+/**
+ * Get schedule overview for dashboard
+ * Returns items grouped by schedule status
+ */
+export const getScheduleOverview = async (
+  requesterId: string,
+  requesterRole: Role
+) => {
+  const now = new Date();
+
+  let portfolioScope: any = {};
+  let programScope: any = {};
+  let projectScope: any = {};
+
+  if (requesterRole === "PROGRAM_MANAGER") {
+    portfolioScope = { ...getPortfolioScope({ role: requesterRole, userId: requesterId }) };
+    programScope = { ...getNestedPortfolioScope({ role: requesterRole, userId: requesterId }) };
+    projectScope = { ...getNestedPortfolioScope({ role: requesterRole, userId: requesterId }) };
+  }
+
+  const [portfolios, programs, projects] = await Promise.all([
+    prisma.portfolio.findMany({
+      where: portfolioScope,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        startDate: true,
+        endDate: true,
+        status: true,
+        yearId: true,
+      },
+    }),
+
+    prisma.program.findMany({
+      where: programScope,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        startDate: true,
+        endDate: true,
+        status: true,
+        portfolioId: true,
+      },
+    }),
+
+    prisma.project.findMany({
+      where: projectScope,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        startDate: true,
+        endDate: true,
+        status: true,
+        portfolioId: true,
+        programId: true,
+      },
+    }),
+  ]);
+
+  const onSchedule: any[] = [];
+  const behindSchedule: any[] = [];
+  const planning: any[] = [];
+  const onHold: any[] = [];
+  const completed: any[] = [];
+
+  // Helper function to categorize an item
+  const categorizeItem = (
+    item: any,
+    type: "PORTFOLIO" | "PROGRAM" | "PROJECT"
+  ) => {
+    const startDate = new Date(item.startDate);
+    const endDate = new Date(item.endDate);
+    const isWithinTimeline = now >= startDate && now <= endDate;
+    const isPastDeadline = now > endDate;
+
+    const categorizedItem = { ...item, type };
+
+    // Status-based categorization
+    if (item.status === "PLANNING") {
+      planning.push(categorizedItem);
+    } else if (item.status === "ON_HOLD") {
+      onHold.push(categorizedItem);
+    } else if (item.status === "COMPLETED") {
+      completed.push(categorizedItem);
+    } else if (item.status === "CANCELLED") {
+      // Skip cancelled items
+      return;
+    } else {
+      // For IN_PROGRESS and other active statuses
+      if (isWithinTimeline) {
+        onSchedule.push(categorizedItem);
+      } else if (isPastDeadline) {
+        behindSchedule.push(categorizedItem);
+      } else {
+        // Before start date - still planning
+        planning.push(categorizedItem);
+      }
+    }
+  };
+
+  portfolios.forEach((p) => categorizeItem(p, "PORTFOLIO"));
+  programs.forEach((p) => categorizeItem(p, "PROGRAM"));
+  projects.forEach((p) => categorizeItem(p, "PROJECT"));
+
+  return {
+    onSchedule,
+    behindSchedule,
+    planning,
+    onHold,
+    completed,
+    summary: {
+      totalOnSchedule: onSchedule.length,
+      totalBehindSchedule: behindSchedule.length,
+      totalPlanning: planning.length,
+      totalOnHold: onHold.length,
+      totalCompleted: completed.length,
+      breakdown: {
+        portfolios: {
+          onSchedule: onSchedule.filter((i) => i.type === "PORTFOLIO").length,
+          behindSchedule: behindSchedule.filter((i) => i.type === "PORTFOLIO")
+            .length,
+          planning: planning.filter((i) => i.type === "PORTFOLIO").length,
+          onHold: onHold.filter((i) => i.type === "PORTFOLIO").length,
+          completed: completed.filter((i) => i.type === "PORTFOLIO").length,
+        },
+        programs: {
+          onSchedule: onSchedule.filter((i) => i.type === "PROGRAM").length,
+          behindSchedule: behindSchedule.filter((i) => i.type === "PROGRAM")
+            .length,
+          planning: planning.filter((i) => i.type === "PROGRAM").length,
+          onHold: onHold.filter((i) => i.type === "PROGRAM").length,
+          completed: completed.filter((i) => i.type === "PROGRAM").length,
+        },
+        projects: {
+          onSchedule: onSchedule.filter((i) => i.type === "PROJECT").length,
+          behindSchedule: behindSchedule.filter((i) => i.type === "PROJECT")
+            .length,
+          planning: planning.filter((i) => i.type === "PROJECT").length,
+          onHold: onHold.filter((i) => i.type === "PROJECT").length,
+          completed: completed.filter((i) => i.type === "PROJECT").length,
+        },
+      },
+    },
   };
 };

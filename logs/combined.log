@@ -1880,3 +1880,197 @@
 {"level":"error","message":"ApiError: Not found - /api/project/cmk85nco50001otllckp1wa37","method":"PUT","path":"/api/project/cmk85nco50001otllckp1wa37","stack":"ApiError: Not found - /api/project/cmk85nco50001otllckp1wa37\n    at notFound (/Users/mac/ppms-be/src/middleware/error.middleware.ts:57:17)\n    at Layer.handleRequest (/Users/mac/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at trimPrefix (/Users/mac/ppms-be/node_modules/router/index.js:342:13)\n    at /Users/mac/ppms-be/node_modules/router/index.js:297:9\n    at processParams (/Users/mac/ppms-be/node_modules/router/index.js:582:12)\n    at next (/Users/mac/ppms-be/node_modules/router/index.js:291:5)\n    at /Users/mac/ppms-be/node_modules/router/index.js:688:15\n    at next (/Users/mac/ppms-be/node_modules/router/index.js:276:14)\n    at router.handle (/Users/mac/ppms-be/node_modules/router/index.js:186:3)\n    at router (/Users/mac/ppms-be/node_modules/router/index.js:60:12)","timestamp":"2026-01-22T22:08:23.715Z"}
 {"level":"error","message":"ApiError: You do not have permission to access this resource","method":"GET","path":"/api/settings/audit-trail","stack":"ApiError: You do not have permission to access this resource\n    at /Users/mac/ppms-be/src/middleware/auth.middleware.ts:79:13\n    at Layer.handleRequest (/Users/mac/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at next (/Users/mac/ppms-be/node_modules/router/lib/route.js:157:13)\n    at /Users/mac/ppms-be/src/middleware/auth.middleware.ts:61:5\n    at Generator.next (<anonymous>)\n    at fulfilled (/Users/mac/ppms-be/src/middleware/auth.middleware.ts:5:58)","timestamp":"2026-01-22T22:10:37.629Z"}
 {"level":"error","message":"ApiError: You do not have permission to access this resource","method":"GET","path":"/api/settings/audit-trail","stack":"ApiError: You do not have permission to access this resource\n    at /Users/mac/ppms-be/src/middleware/auth.middleware.ts:79:13\n    at Layer.handleRequest (/Users/mac/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at next (/Users/mac/ppms-be/node_modules/router/lib/route.js:157:13)\n    at /Users/mac/ppms-be/src/middleware/auth.middleware.ts:61:5\n    at Generator.next (<anonymous>)\n    at fulfilled (/Users/mac/ppms-be/src/middleware/auth.middleware.ts:5:58)","timestamp":"2026-01-22T22:10:38.636Z"}
+{"level":"info","message":"Shutting down gracefully...","timestamp":"2026-01-22T23:56:50.857Z"}
+{"level":"info","message":"Disconnected from database","timestamp":"2026-01-22T23:56:50.868Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-23T08:56:03.510Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-23T08:56:03.601Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-23T08:56:03.602Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-23T09:22:37.271Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-23T09:22:37.319Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-23T09:22:37.320Z"}
+{"level":"info","message":"Shutting down gracefully...","timestamp":"2026-01-23T10:19:00.700Z"}
+{"level":"info","message":"Disconnected from database","timestamp":"2026-01-23T10:19:00.710Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T07:04:52.724Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T07:04:52.956Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T07:04:52.957Z"}
+{"http_code":400,"level":"error","message":"Unhandled Rejection: An unknown file format not allowed","name":"Error","timestamp":"2026-01-24T07:12:53.163Z"}
+{"level":"error","message":"Error: An unknown file format not allowed","method":"POST","path":"/api/projects/cmk7omfsu00044s4lr8p22i37/files","timestamp":"2026-01-24T07:12:53.165Z"}
+{"http_code":400,"level":"error","message":"Unhandled Rejection: An unknown file format not allowed","name":"Error","timestamp":"2026-01-24T07:13:13.808Z"}
+{"level":"error","message":"Error: An unknown file format not allowed","method":"POST","path":"/api/projects/cmk7omfsu00044s4lr8p22i37/files","timestamp":"2026-01-24T07:13:13.809Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T07:20:23.649Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T07:20:23.695Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T07:20:23.696Z"}
+{"http_code":400,"level":"error","message":"Unhandled Rejection: An unknown file format not allowed","name":"Error","timestamp":"2026-01-24T07:27:51.586Z"}
+{"level":"error","message":"Error: An unknown file format not allowed","method":"POST","path":"/api/projects/cmk7omfsu00044s4lr8p22i37/files","timestamp":"2026-01-24T07:27:51.588Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T07:31:18.452Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T07:31:18.497Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T07:31:18.498Z"}
+{"http_code":400,"level":"error","message":"Unhandled Rejection: An unknown file format not allowed","name":"Error","timestamp":"2026-01-24T07:31:41.778Z"}
+{"level":"error","message":"Error: An unknown file format not allowed","method":"POST","path":"/api/projects/cmk7omfsu00044s4lr8p22i37/files","timestamp":"2026-01-24T07:31:41.780Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T07:33:15.909Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T07:33:15.958Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T07:33:15.959Z"}
+{"http_code":400,"level":"error","message":"Unhandled Rejection: An unknown file format not allowed","name":"Error","timestamp":"2026-01-24T07:33:33.341Z"}
+{"level":"error","message":"Error: An unknown file format not allowed","method":"POST","path":"/api/projects/cmk7omfsu00044s4lr8p22i37/files","timestamp":"2026-01-24T07:33:33.343Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T07:35:04.938Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T07:35:04.986Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T07:35:04.987Z"}
+{"http_code":400,"level":"error","message":"Unhandled Rejection: An unknown file format not allowed","name":"Error","timestamp":"2026-01-24T07:35:16.891Z"}
+{"level":"error","message":"Error: An unknown file format not allowed","method":"POST","path":"/api/projects/cmk7omfsu00044s4lr8p22i37/files","timestamp":"2026-01-24T07:35:16.893Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T07:36:07.521Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T07:36:07.576Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T07:36:07.578Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T07:36:22.124Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T07:36:22.167Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T07:36:22.168Z"}
+{"http_code":400,"level":"error","message":"Unhandled Rejection: An unknown file format not allowed","name":"Error","timestamp":"2026-01-24T07:36:29.100Z"}
+{"level":"error","message":"Error: An unknown file format not allowed","method":"POST","path":"/api/projects/cmk7omfsu00044s4lr8p22i37/files","timestamp":"2026-01-24T07:36:29.101Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T07:38:01.131Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T07:38:01.175Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T07:38:01.176Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T08:24:45.132Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T08:24:45.179Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T08:24:45.180Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T08:49:46.578Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T08:49:46.634Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T08:49:46.635Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T08:55:45.405Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T08:55:45.450Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T08:55:45.451Z"}
+{"error":{"http_code":499,"message":"Request Timeout","name":"TimeoutError"},"level":"error","message":"Unhandled Rejection:","timestamp":"2026-01-24T08:57:41.282Z"}
+{"level":"error","message":"TimeoutError: Request Timeout","method":"POST","path":"/api/projects/cmk7omfsu00044s4lr8p22i37/files","timestamp":"2026-01-24T08:57:41.284Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:01:26.742Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:01:26.792Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:01:26.793Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:01:30.335Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:01:30.380Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:01:30.381Z"}
+{"level":"info","message":"Shutting down gracefully...","timestamp":"2026-01-24T09:01:41.305Z"}
+{"level":"info","message":"Disconnected from database","timestamp":"2026-01-24T09:01:41.314Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:01:55.271Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:01:55.317Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:01:55.319Z"}
+{"error":{"http_code":499,"message":"Request Timeout","name":"TimeoutError"},"level":"error","message":"Unhandled Rejection:","timestamp":"2026-01-24T09:02:13.568Z"}
+{"level":"error","message":"TimeoutError: Request Timeout","method":"POST","path":"/api/projects/cmk7omfsu00044s4lr8p22i37/files","timestamp":"2026-01-24T09:02:13.569Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:03:39.372Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:03:39.422Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:03:39.424Z"}
+{"error":{"http_code":499,"message":"Request Timeout","name":"TimeoutError"},"level":"error","message":"Unhandled Rejection:","timestamp":"2026-01-24T09:03:47.359Z"}
+{"level":"error","message":"TimeoutError: Request Timeout","method":"POST","path":"/api/projects/cmk7omfsu00044s4lr8p22i37/files","timestamp":"2026-01-24T09:03:47.361Z"}
+{"error":{"http_code":499,"message":"Request Timeout","name":"TimeoutError"},"level":"error","message":"Unhandled Rejection:","timestamp":"2026-01-24T09:04:01.699Z"}
+{"level":"error","message":"TimeoutError: Request Timeout","method":"POST","path":"/api/projects/cmk7omfsu00044s4lr8p22i37/files","timestamp":"2026-01-24T09:04:01.700Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:04:13.156Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:04:13.200Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:04:13.201Z"}
+{"level":"error","message":"ApiError: File type not allowed","method":"POST","path":"/api/projects/cmk7omfsu00044s4lr8p22i37/files","stack":"ApiError: File type not allowed\n    at fileFilter (/Users/mac/ppms-be/src/middleware/upload.middleware.ts:51:15)\n    at wrappedFileFilter (/Users/mac/ppms-be/node_modules/multer/index.js:44:7)\n    at Multipart.<anonymous> (/Users/mac/ppms-be/node_modules/multer/lib/make-middleware.js:109:7)\n    at Multipart.emit (node:events:508:28)\n    at Multipart.emit (node:domain:489:12)\n    at HeaderParser.cb (/Users/mac/ppms-be/node_modules/busboy/lib/types/multipart.js:358:14)\n    at HeaderParser.push (/Users/mac/ppms-be/node_modules/busboy/lib/types/multipart.js:162:20)\n    at SBMH.ssCb [as _cb] (/Users/mac/ppms-be/node_modules/busboy/lib/types/multipart.js:394:37)\n    at feed (/Users/mac/ppms-be/node_modules/streamsearch/lib/sbmh.js:248:10)\n    at SBMH.push (/Users/mac/ppms-be/node_modules/streamsearch/lib/sbmh.js:104:16)","timestamp":"2026-01-24T09:07:25.019Z"}
+{"error":{"http_code":499,"message":"Request Timeout","name":"TimeoutError"},"level":"error","message":"Unhandled Rejection:","timestamp":"2026-01-24T09:08:47.174Z"}
+{"error":{"http_code":499,"message":"Request Timeout","name":"TimeoutError"},"level":"error","message":"Unhandled Rejection:","timestamp":"2026-01-24T09:09:45.133Z"}
+{"level":"error","message":"TimeoutError: Request Timeout","method":"POST","path":"/api/projects/cmk7omfsu00044s4lr8p22i37/files","timestamp":"2026-01-24T09:09:45.135Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:12:27.470Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:12:27.520Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:12:27.521Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:13:29.986Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:13:30.037Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:13:30.038Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:13:38.113Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:13:38.157Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:13:38.159Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:14:20.745Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:14:20.790Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:14:20.791Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:21:17.482Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:21:17.532Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:21:17.534Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:22:09.560Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:22:09.606Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:22:09.608Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:23:37.680Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:23:37.729Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:23:37.730Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:27:44.029Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:27:44.077Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:27:44.079Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:38:19.302Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:38:19.355Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:38:19.356Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:39:01.448Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:39:01.498Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:39:01.499Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:40:39.369Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:40:39.425Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:40:39.427Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:41:20.344Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:41:20.392Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:41:20.393Z"}
+{"level":"error","message":"ApiError: Portfolio not found","method":"GET","path":"/api/portfolios/cmkltm2j40002rj5sxqkm5fc4","stack":"ApiError: Portfolio not found\n    at /Users/mac/ppms-be/src/services/portfolio.service.ts:165:11\n    at Generator.next (<anonymous>)\n    at fulfilled (/Users/mac/ppms-be/src/services/portfolio.service.ts:5:58)","timestamp":"2026-01-24T09:49:06.694Z"}
+{"level":"error","message":"ApiError: You do not have access to this portfolio","method":"GET","path":"/api/portfolios/cmkltm2j40002rj5sxqkm5fc4/stats","stack":"ApiError: You do not have access to this portfolio\n    at /Users/mac/ppms-be/src/services/portfolio.service.ts:334:13\n    at Generator.next (<anonymous>)\n    at fulfilled (/Users/mac/ppms-be/src/services/portfolio.service.ts:5:58)","timestamp":"2026-01-24T09:49:06.698Z"}
+{"level":"error","message":"ApiError: You do not have access to this portfolio","method":"GET","path":"/api/portfolios/cmkltm2j40002rj5sxqkm5fc4/projects","stack":"ApiError: You do not have access to this portfolio\n    at /Users/mac/ppms-be/src/services/portfolio.service.ts:452:13\n    at Generator.next (<anonymous>)\n    at fulfilled (/Users/mac/ppms-be/src/services/portfolio.service.ts:5:58)","timestamp":"2026-01-24T09:49:06.702Z"}
+{"level":"error","message":"ApiError: You do not have access to this portfolio","method":"GET","path":"/api/portfolios/cmkltm2j40002rj5sxqkm5fc4/programs","stack":"ApiError: You do not have access to this portfolio\n    at /Users/mac/ppms-be/src/services/portfolio.service.ts:555:13\n    at Generator.next (<anonymous>)\n    at fulfilled (/Users/mac/ppms-be/src/services/portfolio.service.ts:5:58)","timestamp":"2026-01-24T09:49:06.703Z"}
+{"level":"error","message":"ApiError: Portfolio not found","method":"GET","path":"/api/portfolios/cmkltm2j40002rj5sxqkm5fc4","stack":"ApiError: Portfolio not found\n    at /Users/mac/ppms-be/src/services/portfolio.service.ts:165:11\n    at Generator.next (<anonymous>)\n    at fulfilled (/Users/mac/ppms-be/src/services/portfolio.service.ts:5:58)","timestamp":"2026-01-24T09:49:07.706Z"}
+{"level":"error","message":"ApiError: You do not have access to this portfolio","method":"GET","path":"/api/portfolios/cmkltm2j40002rj5sxqkm5fc4/stats","stack":"ApiError: You do not have access to this portfolio\n    at /Users/mac/ppms-be/src/services/portfolio.service.ts:334:13\n    at Generator.next (<anonymous>)\n    at fulfilled (/Users/mac/ppms-be/src/services/portfolio.service.ts:5:58)","timestamp":"2026-01-24T09:49:07.710Z"}
+{"level":"error","message":"ApiError: You do not have access to this portfolio","method":"GET","path":"/api/portfolios/cmkltm2j40002rj5sxqkm5fc4/projects","stack":"ApiError: You do not have access to this portfolio\n    at /Users/mac/ppms-be/src/services/portfolio.service.ts:452:13\n    at Generator.next (<anonymous>)\n    at fulfilled (/Users/mac/ppms-be/src/services/portfolio.service.ts:5:58)","timestamp":"2026-01-24T09:49:07.714Z"}
+{"level":"error","message":"ApiError: You do not have access to this portfolio","method":"GET","path":"/api/portfolios/cmkltm2j40002rj5sxqkm5fc4/programs","stack":"ApiError: You do not have access to this portfolio\n    at /Users/mac/ppms-be/src/services/portfolio.service.ts:555:13\n    at Generator.next (<anonymous>)\n    at fulfilled (/Users/mac/ppms-be/src/services/portfolio.service.ts:5:58)","timestamp":"2026-01-24T09:49:07.715Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:51:09.195Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:51:09.243Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:51:09.244Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T09:53:17.066Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T09:53:17.118Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T09:53:17.119Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:03:24.998Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:03:25.045Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:03:25.046Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:04:10.862Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:04:10.909Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:04:10.910Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:07:54.707Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:07:54.758Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:07:54.759Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:08:12.905Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:08:12.951Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:08:12.952Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:09:03.726Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:09:03.776Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:09:03.778Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:09:09.382Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:09:09.429Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:09:09.430Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:12:19.331Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:12:19.376Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:12:19.377Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:12:42.110Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:12:42.155Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:12:42.156Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:12:50.353Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:12:50.397Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:12:50.398Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:17:55.127Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:17:55.173Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:17:55.174Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:19:01.372Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:19:01.421Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:19:01.423Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:22:36.245Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:22:36.289Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:22:36.290Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:24:37.886Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:24:37.947Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:24:37.949Z"}
+{"level":"error","message":"ApiError: User is already active","method":"POST","path":"/api/settings/users/cmks5238h0001rjxn58zboni1/reactivate","stack":"ApiError: User is already active\n    at /Users/mac/ppms-be/src/services/settings.service.ts:643:11\n    at Generator.next (<anonymous>)\n    at fulfilled (/Users/mac/ppms-be/src/services/settings.service.ts:5:58)","timestamp":"2026-01-24T10:24:52.337Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:25:47.150Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:25:47.211Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:25:47.212Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:36:10.192Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:36:10.251Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:36:10.253Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:36:14.245Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:36:14.301Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:36:14.302Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:43:16.451Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:43:16.509Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:43:16.510Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:43:57.222Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:43:57.282Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:43:57.283Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-01-24T10:46:28.076Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-01-24T10:46:28.125Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-01-24T10:46:28.127Z"}

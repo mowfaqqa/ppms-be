@@ -10,49 +10,8 @@ import { ApiError, HttpStatus } from "../utils/error.utils";
 import { notifyProjectAssignment, notifyMention } from "./notification.service";
 import { getRoleDefaultPermissions } from "../utils/helpers";
 import { getNestedPortfolioScope, getNestedProjectScope, getProjectScope } from "../utils/check-access.util";
-import multer from "multer";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
-import cloudinary from "../config/cloudinary";
 
 const prisma = new PrismaClient();
-
-// Configure Cloudinary storage
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: async (req, file) => {
-    // Determine resource type based on mime type
-    const isImage = file.mimetype.startsWith("image/");
-    // const isPdf = file.mimetype === "application/pdf";
-    // const isDocument =
-    //   file.mimetype.includes("word") ||
-    //   file.mimetype.includes("document") ||
-    //   file.mimetype.includes("spreadsheet") ||
-    //   file.mimetype.includes("excel");
-
-    return {
-      folder: "project-files",
-      resource_type: isImage ? "image" : "raw",
-      allowed_formats: [
-        "jpg",
-        "png",
-        "pdf",
-        "doc",
-        "docx",
-        "xls",
-        "xlsx",
-        "txt",
-      ],
-      public_id: `${Date.now()}-${file.originalname.split(".")[0]}`,
-    };
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-  },
-});
 
 // Create project
 /**

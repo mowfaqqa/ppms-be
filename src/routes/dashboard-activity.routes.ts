@@ -8,6 +8,7 @@ import {
   getDashboardActivities,
   getActivityStats,
   getRecentActivitySummary,
+  getScheduleOverview
 } from "../services/dashboard-activity.service";
 import { getPortfolioScope, getNestedPortfolioScope } from "../utils/check-access.util";
 
@@ -784,6 +785,28 @@ router.get(
     } finally {
       await prisma.$disconnect();
     }
+  })
+);
+
+/**
+ * @route   GET /api/dashboard/schedule-overview
+ * @desc    Get schedule overview (on schedule, behind schedule, etc.)
+ * @access  Private - Admin and Program Manager only
+ */
+router.get(
+  "/dashboard/schedule-overview",
+  authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER"]),
+  asyncHandler(async (req: any, res: any) => {
+    const overview = await getScheduleOverview(
+      req.user!.userId,
+      req.user!.role
+    );
+
+    res.status(200).json({
+      success: true,
+      data: overview,
+    });
   })
 );
 
