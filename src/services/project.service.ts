@@ -10,49 +10,8 @@ import { ApiError, HttpStatus } from "../utils/error.utils";
 import { notifyProjectAssignment, notifyMention } from "./notification.service";
 import { getRoleDefaultPermissions } from "../utils/helpers";
 import { getNestedPortfolioScope, getNestedProjectScope, getProjectScope } from "../utils/check-access.util";
-import multer from "multer";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
-import cloudinary from "../config/cloudinary";
 
 const prisma = new PrismaClient();
-
-// Configure Cloudinary storage
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: async (req, file) => {
-    // Determine resource type based on mime type
-    const isImage = file.mimetype.startsWith("image/");
-    // const isPdf = file.mimetype === "application/pdf";
-    // const isDocument =
-    //   file.mimetype.includes("word") ||
-    //   file.mimetype.includes("document") ||
-    //   file.mimetype.includes("spreadsheet") ||
-    //   file.mimetype.includes("excel");
-
-    return {
-      folder: "project-files",
-      resource_type: isImage ? "image" : "raw",
-      allowed_formats: [
-        "jpg",
-        "png",
-        "pdf",
-        "doc",
-        "docx",
-        "xls",
-        "xlsx",
-        "txt",
-      ],
-      public_id: `${Date.now()}-${file.originalname.split(".")[0]}`,
-    };
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-  },
-});
 
 // Create project
 /**
@@ -177,49 +136,40 @@ export const getAllProjects = async (
   const projectScope = getNestedProjectScope(user);
   let where: any = {};
 
+  if (filters?.standalone) {
+    where.programId = null;
+  } else {
+    where.programId = { not: null };
+  }
+
   if (user.role === "PROGRAM_MANAGER") {
-    where = { ...nestedPortfolioScope };
+    where = { ...where, ...nestedPortfolioScope };
   } else if (user.role === "PROJECT_MANAGER") {
-    where = { ...projectScope };
+    where = { ...where, ...projectScope };
   }
   
   if (filters?.portfolioId) {
-    where = {
-      ...where,
-      portfolioId: filters.portfolioId,
-    };
+    where.portfolioId = filters.portfolioId;
   }
   
   if (filters?.programId) {
-    where = {
-      ...where,
-      programId: filters.programId,
-    };
-  }
-  
-  // Standalone projects
-  if (filters?.standalone === true) {
-    where = {
-      ...where,
-      programId: null,
-    };
+    where.programId = filters.programId;
   }
   
   if (filters?.status) {
-    where = {
-      ...where,
-      status: filters.status,
-    };
+    where.status = filters.status;
   }
   
   if (filters?.search) {
-    where = {
-      ...where,
+    where.AND = [
+    ...(where.AND || []),
+    {
       OR: [
         { name: { contains: filters.search, mode: "insensitive" } },
         { description: { contains: filters.search, mode: "insensitive" } },
       ],
-    };
+    },
+  ];
   }
 
   return prisma.project.findMany({

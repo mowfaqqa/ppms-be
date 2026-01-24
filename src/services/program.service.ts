@@ -1,6 +1,7 @@
 import { PrismaClient, Program, ProgramStatus, Role } from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
 import { getNestedPortfolioScope } from "../utils/check-access.util";
+import { getPortfolioScope } from "../utils/check-access.util";
 
 const prisma = new PrismaClient();
 
@@ -136,17 +137,42 @@ export const getAllPrograms = async (filters?: {
 /**
  * Get program by ID
  */
-export const getProgramById = async (id: string) => {
+export const getProgramById = async (id: string, user?: {
+  userRole: Role,
+  userId: string
+}) => {
+  let whereClause: any = { id };
+
+  // Role-based filtering for program managers
+  if (user.userRole === "PROGRAM_MANAGER") {
+    const portfolioScope = getPortfolioScope({
+      role: user.userRole, userId: user.userId
+    });
+    whereClause.portfolio = portfolioScope;
+  }
+
   const program = await prisma.program.findUnique({
-    where: { id },
+    where: whereClause,
     include: {
       portfolio: {
-        include: {
-          year: true,
+        select: {
+          id: true,
+          name: true,
+          year: {
+            select: {
+              id: true,
+              year: true,
+            },
+          },
         },
       },
       projects: {
-        include: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          startDate: true,
+          endDate: true,
           _count: {
             select: {
               tasks: true,
@@ -154,13 +180,11 @@ export const getProgramById = async (id: string) => {
             },
           },
         },
-        orderBy: {
-          createdAt: "desc",
-        },
       },
       _count: {
         select: {
           projects: true,
+          activities: true,
         },
       },
     },

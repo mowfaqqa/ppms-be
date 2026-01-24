@@ -28,60 +28,17 @@ import {
 import { auditLog } from "../middleware/audit.middleware";
 import { AuditAction, EntityType, ProjectMemberRole } from "@prisma/client";
 import { getRelatedProjectsController } from "../controllers/project_relationship.controller";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "../config/cloudinary";
-import multer from "multer";
 import prisma from "../config/db";
 import { ApiError, HttpStatus } from "../utils/error.utils";
+import upload, { handleMulterErrors} from "../middleware/upload.middleware";
 
 const router = Router();
 
-// Configure Cloudinary storage
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: async (_req, file) => {
-    // Determine resource type based on mime type
-    const isImage = file.mimetype.startsWith("image/");
-    // const isPdf = file.mimetype === "application/pdf";
-    // const isDocument =
-    //   file.mimetype.includes("word") ||
-    //   file.mimetype.includes("document") ||
-    //   file.mimetype.includes("spreadsheet") ||
-    //   file.mimetype.includes("excel");
-
-    return {
-      folder: "project-files",
-      resource_type: isImage ? "image" : "raw", // Use "raw" for non-images
-      allowed_formats: [
-        "jpg",
-        "png",
-        "pdf",
-        "doc",
-        "docx",
-        "xls",
-        "xlsx",
-        "txt",
-      ],
-      public_id: `${Date.now()}-${file.originalname.split(".")[0]}`,
-    };
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-  },
-});
-/**
- * @route   POST /api/projects
- * @desc    Create a new project
- * @access  Private/Project Manager/Admin
- */
 router.post(
   "/",
   authenticate,
-  authorize(["ADMIN", "PROGRAM_MANAGER"]),
+  authorize(["ADMIN", "PROJECT_MANAGER", "PROGRAM_MANAGER"]),
   [
     check("name", "Name is required").notEmpty(),
     check("portfolioId", "Portfolio ID is required").notEmpty(),
@@ -136,7 +93,7 @@ router.get(
   "/",
   authenticate,
   asyncHandler(async (req: any, res: any) => {
-    const { portfolioId, status, search } = req.query;
+    const { portfolioId, status, search, standalone } = req.query;
 
     const projects = await getAllProjects(
       {
@@ -147,6 +104,7 @@ router.get(
       portfolioId: portfolioId as string,
       status: status as any,
       search: search as string,
+      standalone: standalone as boolean
       }
     );
 
@@ -661,6 +619,13 @@ router.post(
   authenticate,
   checkProjectPermission("project.view"),
   upload.array("files", 10), // Max 10 files at once
+  async (req: any, res: any, next: any) => {
+    try {
+      next();
+    } catch (err) {
+      handleMulterErrors(err, req, res, next);
+    }
+  },
   auditLog({
     action: AuditAction.UPLOADED,
     entityType: EntityType.PROJECT,

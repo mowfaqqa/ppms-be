@@ -4,6 +4,8 @@ import { ApiError, HttpStatus } from "../utils/error.utils";
 import {
   generateTemporaryPassword,
   sendUserCreatedEmail,
+  sendAccountDeactivatedEmail,
+  sendAccountReactivatedEmail
 } from "../utils/email.utils";
 
 const prisma = new PrismaClient();
@@ -58,42 +60,31 @@ export const createUser = async (
 
   // Create user in transaction
   const result = await prisma.$transaction(async (tx) => {
-    // create user data object to append portfolios if user is PROGRAM_MANAGER
-    const userData: any = {
-      name: data.name,
-      email: data.email,
-      password: hashedPassword,
-      staffId: data.staffId,
-      department: data.department,
-      role: data.role,
-      isActive: true,
-      temporaryPassword: true,
-      joiningDate: new Date(),
-      createdById: creatorId,
-    };
-
-    if (data.role === "PROGRAM_MANAGER" && data.portfolioIds?.length) {
-      userData.managedPortfolios = {
-        connect: data.portfolioIds.map((id) => ({ id })),
-      };
-    }
-    // Create user
     const user = await tx.user.create({
-      data: userData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        staffId: true,
-        department: true,
-        role: true,
+      data: {
+        name: data.name,
+        email: data.email,
+        password: hashedPassword,
+        staffId: data.staffId,
+        department: data.department,
+        role: data.role,
         isActive: true,
-        joiningDate: true,
-        createdAt: true,
-        updatedAt: true,
-        managedPortfolios: true
+        temporaryPassword: true,
+        joiningDate: new Date(),
+        createdById: creatorId,
       },
     });
+
+    if (data.role === "PROGRAM_MANAGER" && data.portfolioIds.length > 0) {      
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          managedPortfolios: {
+            connect: data.portfolioIds.map((id) => ({ id })),
+          },
+        },
+      });
+    }
 
     // Create audit log
     await tx.auditLog.create({
@@ -122,16 +113,16 @@ export const createUser = async (
   });
 
   // Send welcome email with temporary password
-  // try {
-  //   await sendUserCreatedEmail(
-  //     result.user.email,
-  //     result.user.name,
-  //     result.temporaryPassword
-  //   );
-  // } catch (error) {
-  //   console.error("Failed to send user creation email:", error);
-  //   // Don't fail the entire operation if email fails
-  // }
+  try {
+    await sendUserCreatedEmail(
+      result.user.email,
+      result.user.name,
+      result.temporaryPassword
+    );
+  } catch (error) {
+    console.error("Failed to send user creation email:", error);
+    // Don't fail the entire operation if email fails
+  }
 
   return result.user;
 };
@@ -195,6 +186,12 @@ export const getAllUsers = async (filters?: {
             tasks: true,
           },
         },
+        managedPortfolios: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
       },
       orderBy: [{ isActive: "desc" }, { name: "asc" }],
       skip,
@@ -203,8 +200,13 @@ export const getAllUsers = async (filters?: {
     prisma.user.count({ where }),
   ]);
 
+  const transformedUsers = users.map((user) => ({
+    ...user,
+    portfolioIds: user.managedPortfolios?.map((p) => p.id) || [],
+  }));
+
   return {
-    users,
+    users: transformedUsers,
     pagination: {
       page,
       limit,
@@ -435,6 +437,54 @@ export const updateUserSettings = async (
       },
     });
 
+    if (data.role === "PROGRAM_MANAGER" && data.portfolioIds !== undefined) {
+      // Get current portfolio IDs
+      const currentPortfolioIds = existingUser.managedPortfolios.map((p) => p.id);
+      const newPortfolioIds = data.portfolioIds;
+
+      // Disconnect portfolios that are no longer assigned
+      const toDisconnect = currentPortfolioIds.filter(
+        (id) => !newPortfolioIds.includes(id)
+      );
+      if (toDisconnect.length > 0) {
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            managedPortfolios: {
+              disconnect: toDisconnect.map((id) => ({ id })),
+            },
+          },
+        });
+      }
+
+      // Connect new portfolios
+      const toConnect = newPortfolioIds.filter(
+        (id) => !currentPortfolioIds.includes(id)
+      );
+      if (toConnect.length > 0) {
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            managedPortfolios: {
+              connect: toConnect.map((id) => ({ id })),
+            },
+          },
+        });
+      }
+    } else if (data.role && data.role !== "PROGRAM_MANAGER") {
+      // If role changed from PROGRAM_MANAGER to something else, disconnect all portfolios
+      if (existingUser.managedPortfolios.length > 0) {
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            managedPortfolios: {
+              disconnect: existingUser.managedPortfolios.map((p) => ({ id: p.id })),
+            },
+          },
+        });
+      }
+    }
+
     // Create audit log if there are changes
     if (Object.keys(changes.new).length > 0) {
       const changeDescriptions = Object.keys(changes.new).map((key) => {
@@ -560,6 +610,16 @@ export const deleteUser = async (
       },
     });
   });
+
+  // Send deactivation email with 
+  try {
+    await sendAccountDeactivatedEmail(
+      user.email,
+      user.name,
+    );
+  } catch (error) {
+    console.error("Failed to send user deactivation email:", error);
+  }
 };
 
 /**
@@ -606,6 +666,16 @@ export const reactivateUser = async (
       },
     });
   });
+
+  // Send reactivation email with 
+  try {
+    await sendAccountDeactivatedEmail(
+      user.email,
+      user.name,
+    );
+  } catch (error) {
+    console.error("Failed to send user reactivation email:", error);
+  }
 
   return getUserDetails(userId);
 };

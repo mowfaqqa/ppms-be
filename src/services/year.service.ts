@@ -1,5 +1,6 @@
-import { PrismaClient, Year } from "@prisma/client";
+import { PrismaClient, Role, Year } from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
+import { getPortfolioScope } from "../utils/check-access.util";
 
 const prisma = new PrismaClient();
 
@@ -32,10 +33,47 @@ export const createYear = async (data: {
 /**
  * Get all years with portfolio counts
  */
-export const getAllYears = async (): Promise<
+export const getAllYears = async (user?: {
+  role: Role,
+  userId: string
+}): Promise<
   (Year & { _count: { portfolios: number } })[]
 > => {
+  let where: any = {};
+
+  if (user.role === "PROGRAM_MANAGER") {
+    where = {
+      portfolios: {
+        some: {
+          programManagers: {
+            some: {
+              id: user.userId,
+            },
+          },
+        },
+      },
+    };
+  }
+
+  if (user.role === "PROJECT_MANAGER") {
+    where = {
+      portfolios: {
+        some: {
+          projects: {
+            some: {
+              members: {
+                some: {
+                  id: user.userId,
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+  }
   return prisma.year.findMany({
+    where,
     include: {
       _count: {
         select: {
@@ -52,11 +90,24 @@ export const getAllYears = async (): Promise<
 /**
  * Get year by ID with portfolios
  */
-export const getYearById = async (id: string) => {
+export const getYearById = async (
+  id: string,
+  user?: {
+    userRole: Role,
+    userId: string
+  }) => {
+  let portfolioWhere: any = {};
+  const nestedPortfolio = getPortfolioScope({ role: user.userRole, userId: user.userId});
+
+  if (user.userRole === "PROGRAM_MANAGER") {
+    portfolioWhere = { ...nestedPortfolio };  
+  }
+  
   const year = await prisma.year.findUnique({
     where: { id },
     include: {
       portfolios: {
+        where: portfolioWhere,
         include: {
           _count: {
             select: {
@@ -185,8 +236,15 @@ export const deleteYear = async (id: string): Promise<void> => {
 /**
  * Get year statistics
  */
-export const getYearStats = async (id: string) => {
-  // Check if year exists
+export const getYearStats = async (
+  id: string,
+  user?: {
+    userRole: Role,
+    userId: string
+  }
+) => {
+  let portfolioScope: any = {};
+
   const year = await prisma.year.findUnique({
     where: { id },
   });
@@ -195,25 +253,31 @@ export const getYearStats = async (id: string) => {
     throw new ApiError(HttpStatus.NOT_FOUND, "Year not found");
   }
 
-  // Get portfolios count
+  if (user.userRole === 'PROGRAM_MANAGER') {
+    portfolioScope = getPortfolioScope({ role: user.userRole, userId: user.userId});
+  }
+
   const portfoliosCount = await prisma.portfolio.count({
-    where: { yearId: id },
+    where: { 
+      yearId: id,
+      ...portfolioScope
+    },
   });
 
-  // Get programs count across all portfolios in this year
   const programsCount = await prisma.program.count({
     where: {
       portfolio: {
         yearId: id,
+        ...portfolioScope
       },
     },
   });
 
-  // Get projects count across all portfolios in this year
   const projectsCount = await prisma.project.count({
     where: {
       portfolio: {
         yearId: id,
+        ...portfolioScope
       },
     },
   });
@@ -224,6 +288,7 @@ export const getYearStats = async (id: string) => {
       project: {
         portfolio: {
           yearId: id,
+          ...portfolioScope
         },
       },
     },
@@ -234,6 +299,7 @@ export const getYearStats = async (id: string) => {
     where: {
       portfolio: {
         yearId: id,
+        ...portfolioScope
       },
     },
     select: {
@@ -259,6 +325,7 @@ export const getYearStats = async (id: string) => {
       project: {
         portfolio: {
           yearId: id,
+          ...portfolioScope
         },
       },
     },
@@ -291,7 +358,14 @@ export const getYearStats = async (id: string) => {
 /**
  * Get all portfolios for a year
  */
-export const getYearPortfolios = async (yearId: string) => {
+export const getYearPortfolios = async (
+  yearId: string,
+  user?: {
+    userRole: Role,
+    userId: string
+  }
+) => {
+  let portfolioScope: any = {};
   // Check if year exists
   const year = await prisma.year.findUnique({
     where: { id: yearId },
@@ -301,8 +375,12 @@ export const getYearPortfolios = async (yearId: string) => {
     throw new ApiError(HttpStatus.NOT_FOUND, "Year not found");
   }
 
+   if (user.userRole === 'PROGRAM_MANAGER') {
+    portfolioScope = getPortfolioScope({ role: user.userRole, userId: user.userId});
+  }
+
   return prisma.portfolio.findMany({
-    where: { yearId },
+    where: { yearId, ...portfolioScope },
     include: {
       _count: {
         select: {

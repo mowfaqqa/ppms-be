@@ -62,7 +62,10 @@ router.get(
   "/",
   authenticate,
   asyncHandler(async (req: any, res: any) => {
-    const years = await getAllYears();
+    const years = await getAllYears({
+      role: req.user.role,
+      userId: req.user.userId
+    });
 
     res.status(200).json({
       success: true,
@@ -79,10 +82,17 @@ router.get(
 router.get(
   "/:id",
   authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER"]),
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
-    const year = await getYearById(id);
+    const year = await getYearById(
+      id,
+      {
+        userRole: req.user.role,
+        userId: req.user.userId
+      }
+    );
 
     res.status(200).json({
       success: true,
@@ -189,7 +199,13 @@ router.get(
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
-    const stats = await getYearStats(id);
+    const stats = await getYearStats(
+      id,
+      {
+        userRole: req.user.role,
+        userId: req.user.userId
+      }
+    );
 
     res.status(200).json({
       success: true,
@@ -209,7 +225,13 @@ router.get(
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
 
-    const portfolios = await getYearPortfolios(id);
+    const portfolios = await getYearPortfolios(
+      id,
+      {
+        userRole: req.user.role,
+        userId: req.user.userId
+      }
+    );
 
     res.status(200).json({
       success: true,
