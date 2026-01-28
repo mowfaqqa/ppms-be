@@ -633,6 +633,7 @@ router.get(
       res.status(200).json({
         success: true,
         data: {
+          kind: "project",
           statusDistribution,
           projectsByStatus,
           total: projects.length,
@@ -779,6 +780,185 @@ router.get(
             inProgressTasks: tasksByStatus.IN_PROGRESS.length,
             todoTasks: tasksByStatus.TODO.length,
             reviewTasks: tasksByStatus.REVIEW.length,
+          },
+        },
+      });
+    } finally {
+      await prisma.$disconnect();
+    }
+  })
+);
+
+/**
+ * @route   GET /api/dashboard/portfolios/stats
+ * @desc    Get portfolio statistics by status (Admin and Program Manager only)
+ * @access  Private - Admin, Program Manager
+ */
+router.get(
+  "/dashboard/portfolios/stats",
+  authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER"]),
+  asyncHandler(async (req: any, res: any) => {
+    const { PrismaClient } = require("@prisma/client");
+    const prisma = new PrismaClient();
+    const userRole = req.user.role;
+    const now = new Date();
+
+    try {
+      const portfolioScope = getPortfolioScope(req.user);
+
+      // Get all portfolios with details
+      const portfolios = await prisma.portfolio.findMany({
+        where: portfolioScope,
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          startDate: true,
+          endDate: true,
+          status: true,
+          yearId: true,
+          _count: {
+            select: {
+              programs: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      // Group portfolios by status (Active vs Completed)
+      const portfoliosByStatus: any = {
+        ACTIVE: [],
+        COMPLETED: [],
+      };
+
+      portfolios.forEach((portfolio) => {
+        const endDate = new Date(portfolio.endDate);
+        const isActive = now <= endDate;
+        
+        const statusKey = isActive ? 'ACTIVE' : 'COMPLETED';
+        portfoliosByStatus[statusKey].push({
+          id: portfolio.id,
+          name: portfolio.name,
+          description: portfolio.description,
+          startDate: portfolio.startDate,
+          endDate: portfolio.endDate,
+          status: portfolio.status,
+          programCount: portfolio._count.programs,
+        });
+      });
+
+      // Get status distribution counts
+      const statusDistribution = {
+        ACTIVE: portfoliosByStatus.ACTIVE.length,
+        COMPLETED: portfoliosByStatus.COMPLETED.length,
+      };
+
+      res.status(200).json({
+        success: true,
+        data: {
+          kind: "portfolio",
+          statusDistribution,
+          portfoliosByStatus,
+          total: portfolios.length,
+          summary: {
+            totalPortfolios: portfolios.length,
+            totalPrograms: portfolios.reduce((sum, p) => sum + p._count.programs, 0),
+          },
+        },
+      });
+    } finally {
+      await prisma.$disconnect();
+    }
+  })
+);
+
+/**
+ * @route   GET /api/dashboard/programs/stats
+ * @desc    Get program statistics by status (Admin and Program Manager only)
+ * @access  Private - Admin, Program Manager
+ */
+router.get(
+  "/dashboard/program/stats",
+  authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER"]),
+  asyncHandler(async (req: any, res: any) => {
+    const { PrismaClient } = require("@prisma/client");
+    const prisma = new PrismaClient();
+    const userRole = req.user.role;
+
+    try {
+      const nestedPortfolioScope = getNestedPortfolioScope(req.user);
+
+      // Get all programs with details
+      const programs = await prisma.program.findMany({
+        where: nestedPortfolioScope,
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          startDate: true,
+          endDate: true,
+          status: true,
+          portfolioId: true,
+          portfolio: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          _count: {
+            select: {
+              projects: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      // Group programs by status (Active: Planning + In Progress vs Completed)
+      const programsByStatus: any = {
+        ACTIVE: [],
+        COMPLETED: [],
+      };
+
+      programs.forEach((program) => {
+        const isActive = program.status === 'PLANNING' || program.status === 'IN_PROGRESS';
+        const statusKey = isActive ? 'ACTIVE' : 'COMPLETED';
+        
+        programsByStatus[statusKey].push({
+          id: program.id,
+          name: program.name,
+          description: program.description,
+          startDate: program.startDate,
+          endDate: program.endDate,
+          status: program.status,
+          projectCount: program._count.projects,
+          portfolio: program.portfolio,
+        });
+      });
+
+      // Get status distribution counts
+      const statusDistribution = {
+        ACTIVE: programsByStatus.ACTIVE.length,
+        COMPLETED: programsByStatus.COMPLETED.length,
+      };
+
+      res.status(200).json({
+        success: true,
+        data: {
+          kind: "program",
+          statusDistribution,
+          programsByStatus,
+          total: programs.length,
+          summary: {
+            totalPrograms: programs.length,
+            totalProjects: programs.reduce((sum, p) => sum + p._count.projects, 0),
           },
         },
       });
