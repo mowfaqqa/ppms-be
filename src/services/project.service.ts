@@ -250,7 +250,7 @@ export const getProjectById = async (id: string) => {
         select: {
           tasks: true,
           members: true,
-          files: true,
+          projectFiles: true,
           comments: true,
         },
       },
@@ -1106,15 +1106,15 @@ export const getProjectComments = async (
     role: user.role,
     userId: user.userId,
   });
-  const projectScope = getProjectScope({
+  const projectScope = getNestedProjectScope({
     role: user.role,
     userId: user.userId,
   });
 
   if (user.role === "PROGRAM_MANAGER") {
-    whereQuery.project = { id: projectId, ...nestedPortfolioScope };
+    whereQuery = { id: projectId, ...nestedPortfolioScope };
   } else if (user.role === "PROJECT_MANAGER") {
-    whereQuery.project = { id: projectId, ...projectScope };
+    whereQuery = { id: projectId, ...projectScope };
   }
 
   const project = await prisma.project.findFirst({

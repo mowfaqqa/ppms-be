@@ -21,7 +21,7 @@ const router = Router();
 router.get(
   "/",
   authenticate,
-  authorize(["ADMIN"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER"]),
   asyncHandler(async (req: any, res: any) => {
     const users = await getAllUsers();
 
