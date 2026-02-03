@@ -2158,3 +2158,29 @@
 {"level":"info","message":"WebSocket server initialized","timestamp":"2026-02-03T08:00:58.405Z"}
 {"level":"info","message":"Connected to database","timestamp":"2026-02-03T08:00:58.462Z"}
 {"level":"info","message":"Server is running on port 8080","timestamp":"2026-02-03T08:00:58.464Z"}
+{"level":"info","message":"Shutting down gracefully...","timestamp":"2026-02-03T08:05:31.088Z"}
+{"level":"info","message":"Disconnected from database","timestamp":"2026-02-03T08:05:31.100Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-02-03T08:32:32.940Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-02-03T08:32:33.002Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-02-03T08:32:33.003Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-02-03T08:43:47.484Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-02-03T08:43:49.219Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-02-03T08:43:49.221Z"}
+{"level":"error","message":"ApiError: User not found","method":"GET","path":"/api/settings/users","stack":"ApiError: User not found\n    at /Users/mac/ppms-be/src/middleware/auth.middleware.ts:52:13\n    at Generator.next (<anonymous>)\n    at fulfilled (/Users/mac/ppms-be/src/middleware/auth.middleware.ts:5:58)","timestamp":"2026-02-03T09:06:43.113Z"}
+{"level":"error","message":"ApiError: User not found","method":"GET","path":"/api/portfolios","stack":"ApiError: User not found\n    at /Users/mac/ppms-be/src/middleware/auth.middleware.ts:52:13\n    at Generator.next (<anonymous>)\n    at fulfilled (/Users/mac/ppms-be/src/middleware/auth.middleware.ts:5:58)","timestamp":"2026-02-03T09:06:44.680Z"}
+{"level":"error","message":"ApiError: User not found","method":"GET","path":"/api/settings/departments","stack":"ApiError: User not found\n    at /Users/mac/ppms-be/src/middleware/auth.middleware.ts:52:13\n    at Generator.next (<anonymous>)\n    at fulfilled (/Users/mac/ppms-be/src/middleware/auth.middleware.ts:5:58)","timestamp":"2026-02-03T09:06:44.689Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-02-03T09:51:47.093Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-02-03T09:51:49.364Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-02-03T09:51:49.368Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-02-03T10:58:32.840Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-02-03T10:58:32.887Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-02-03T10:58:32.889Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-02-03T11:12:24.998Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-02-03T11:12:25.050Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-02-03T11:12:25.052Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-02-03T11:14:15.934Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-02-03T11:14:15.978Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-02-03T11:14:15.980Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-02-03T11:29:36.683Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-02-03T11:29:36.731Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-02-03T11:29:36.732Z"}

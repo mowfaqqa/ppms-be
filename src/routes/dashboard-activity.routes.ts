@@ -969,6 +969,49 @@ router.get(
 );
 
 /**
+ * @route   GET /api/dashboard/schedule/stats
+ * @desc    Get schedule-based statistics (On Schedule vs Behind Schedule)
+ * @access  Private - Admin, Program Manager
+ */
+router.get(
+  "/dashboard/schedule/stats",
+  authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER"]),
+  asyncHandler(async (req: any, res: any) => {
+    const overview = await getScheduleOverview(
+      req.user!.userId,
+      req.user!.role
+    );
+
+    // Format data for charts
+    const statusDistribution = {
+      ON_SCHEDULE: overview.summary.totalOnSchedule,
+      BEHIND_SCHEDULE: overview.summary.totalBehindSchedule,
+    };
+
+    const itemsByStatus = {
+      ON_SCHEDULE: overview.onSchedule,
+      BEHIND_SCHEDULE: overview.behindSchedule,
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        kind: "schedule",
+        statusDistribution,
+        itemsByStatus,
+        total: overview.summary.totalOnSchedule + overview.summary.totalBehindSchedule,
+        summary: {
+          totalOnSchedule: overview.summary.totalOnSchedule,
+          totalBehindSchedule: overview.summary.totalBehindSchedule,
+          breakdown: overview.summary.breakdown,
+        },
+      },
+    });
+  })
+);
+
+/**
  * @route   GET /api/dashboard/schedule-overview
  * @desc    Get schedule overview (on schedule, behind schedule, etc.)
  * @access  Private - Admin and Program Manager only
