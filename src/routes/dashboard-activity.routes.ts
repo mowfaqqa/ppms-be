@@ -123,7 +123,7 @@ router.get(
           tasksByStatus
         ] = await Promise.all([
           prisma.task.count({ where: { projectId: { in: projectIds } } }),
-          prisma.file.count({ where: { projectId: { in: projectIds } } }),
+          prisma.projectFile.count({ where: { projectId: { in: projectIds } } }),
           prisma.projectMember.count({
             where: {
               projectId: { in: projectIds },
