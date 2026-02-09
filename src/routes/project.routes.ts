@@ -417,7 +417,6 @@ router.get(
   checkProjectPermission("project.view"),
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
-    console.log('this is gettiung here')
     const stats = await getProjectStats(id);
 
     res.status(200).json({
