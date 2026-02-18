@@ -24,6 +24,7 @@ import sprintRoutes from "./routes/sprint.routes";
 import backlogRoutes from "./routes/backlog.routes";
 import dashboardRoutes from "./routes/dashboard-activity.routes";
 import settingsRoutes from "./routes/settings.routes";
+import searchRoutes from "./routes/search.routes";
 
 // Load environment variables
 config();
@@ -71,6 +72,7 @@ app.use("/api", sprintRoutes);
 app.use("/api", backlogRoutes);
 app.use("/api", dashboardRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/search", searchRoutes);
 
 // API health check route
 app.get("/api/health", (req, res) => {

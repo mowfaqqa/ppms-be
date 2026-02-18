@@ -1,6 +1,7 @@
 import { PrismaClient, Role, Sprint, SprintStatus, Task } from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
 import { getTaskScope } from "../utils/check-access.util";
+import { notifySprintStarted } from "./notification.service";
 
 const prisma = new PrismaClient();
 
@@ -430,6 +431,36 @@ export const startSprint = async (sprintId: string, userId: string): Promise<Spr
       HttpStatus.CONFLICT,
       "Project already has an active sprint"
     );
+  }
+
+   const members = await prisma.projectMember.findMany({
+    where: { projectId: sprint.projectId },
+    select: { userId: true },
+  });
+
+  const userIds = members.map((m) => m.userId);
+
+  const actor = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true },
+  });
+
+  const project = await prisma.project.findUnique({
+    where: { id: sprint.projectId},
+    select: { name: true },
+  })
+
+  try {
+    await notifySprintStarted(
+      userIds,
+      sprint.id,
+      sprint.name,
+      project.name,
+      userId,
+      actor?.name || "System"
+    );
+  } catch (error) {
+    console.error("Failed to create sprint started notification:", error);
   }
 
   return updateSprint(sprintId, { status: "ACTIVE" }, userId);

@@ -17,7 +17,7 @@ export const checkProjectPermission = (permission: string) => {
         return next();
       }
 
-      const projectId = req.params.projectId ?? req.params.id ?? req.body.projectId;
+      const projectId = req.params.projectId ?? req.params.sprintId ?? req.params.id ?? req.body.projectId;
 
       if (!projectId) {
         throw new ApiError(HttpStatus.BAD_REQUEST, "Project ID is required");

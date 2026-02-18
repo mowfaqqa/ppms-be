@@ -1413,8 +1413,8 @@ export const removeProjectMember = async (
   memberId: string,
 ): Promise<void> => {
   // Check if project member exists
-  const projectMember = await prisma.projectMember.findUnique({
-    where: { id: memberId },
+  const projectMember = await prisma.projectMember.findFirst({
+    where: { userId: memberId, projectId: projectId },
     include: {
       user: {
         select: {
@@ -1432,7 +1432,7 @@ export const removeProjectMember = async (
   await prisma.$transaction(async (tx) => {
     // Delete project member
     await tx.projectMember.delete({
-      where: { id: memberId },
+      where: { id: projectMember.id },
     });
 
     // Create activity log

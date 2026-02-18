@@ -2,6 +2,7 @@ import { PrismaClient, Program, ProgramStatus, Role } from "@prisma/client";
 import { ApiError, HttpStatus } from "../utils/error.utils";
 import { getNestedPortfolioScope } from "../utils/check-access.util";
 import { getPortfolioScope } from "../utils/check-access.util";
+import { createBulkNotifications } from "./notification.service";
 
 const prisma = new PrismaClient();
 
@@ -336,6 +337,68 @@ export const updateProgram = async (
       where: { programId: id },
       data: { portfolioId: data.portfolioId },
     });
+  }
+
+  // 🔔 Notify program managers and project managers about status changes
+  if (data.status && data.status !== program.status) {
+    try {
+      // Get program managers from portfolio
+      const portfolio = await prisma.portfolio.findUnique({
+        where: { id: updatedProgram.portfolioId },
+        include: {
+          programManagers: {
+            select: { id: true }
+          }
+        }
+      });
+
+      // Get all project managers from projects in this program
+      const projectManagers = await prisma.projectMember.findMany({
+        where: {
+          project: {
+            programId: id
+          },
+          role: 'PROJECT_MANAGER'
+        },
+        select: { userId: true },
+        distinct: ['userId']
+      });
+
+      // Get updater's name
+      const updater = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true }
+      });
+
+      // Combine all user IDs and remove duplicates
+      const programManagerIds = portfolio?.programManagers.map(pm => pm.id) || [];
+      const projectManagerIds = projectManagers.map(pm => pm.userId);
+      const allUserIds = [...new Set([...programManagerIds, ...projectManagerIds])].filter(id => id !== userId);
+
+      if (allUserIds.length > 0) {
+        const notifications = allUserIds.map(notifyUserId => ({
+          userId: notifyUserId,
+          type: 'PROGRAM_STATUS_CHANGED' as any,
+          title: 'Program Status Updated',
+          message: `${updater?.name || 'Someone'} changed program "${updatedProgram.name}" status from ${program.status} to ${data.status}`,
+          entityType: 'PROGRAM',
+          entityId: id,
+          entityName: updatedProgram.name,
+          actionUrl: `/programs/${id}`,
+          actorId: userId,
+          actorName: updater?.name || 'Someone',
+          priority: 'NORMAL' as any,
+          metadata: {
+            oldStatus: program.status,
+            newStatus: data.status
+          }
+        }));
+
+        await createBulkNotifications(notifications);
+      }
+    } catch (notificationError) {
+      console.error('Failed to send program status change notification:', notificationError);
+    }
   }
 
   return updatedProgram;
