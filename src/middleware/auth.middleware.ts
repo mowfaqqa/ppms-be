@@ -55,43 +55,6 @@ export const authenticate = async (
     if (!user.isActive) {
       throw new ApiError(HttpStatus.UNAUTHORIZED, "Account is inactive");
     }
-
-    // ── Session timeout check ──────────────────────────────────────────────
-    const session = await prisma.userSession.findUnique({
-      where: { token },
-    });
-
-    if (!session) {
-      throw new ApiError(
-        HttpStatus.UNAUTHORIZED,
-        "Session not found. Please log in again."
-      );
-    }
-
-    if (new Date() > session.expiresAt) {
-      await prisma.userSession.delete({ where: { token } });
-      throw new ApiError(
-        HttpStatus.UNAUTHORIZED,
-        "Session expired. Please log in again."
-      );
-    }
-
-    const idleMs = Date.now() - session.lastActivity.getTime();
-    if (idleMs > SESSION_TIMEOUT_MS) {
-      await prisma.userSession.delete({ where: { token } });
-      throw new ApiError(
-        HttpStatus.UNAUTHORIZED,
-        "Session timed out due to inactivity. Please log in again."
-      );
-    }
-
-    // Refresh lastActivity so active users never get kicked
-    await prisma.userSession.update({
-      where: { token },
-      data: { lastActivity: new Date() },
-    });
-    // ── End session timeout check ──────────────────────────────────────────
-
     // Set user info in request
     req.user = {
       userId: decoded.userId,
