@@ -263,8 +263,7 @@ router.post(
     check("userId", "User ID is required").notEmpty(),
     check("role", "Role must be valid")
       .optional()
-      .isIn(["PROJECT_MANAGER","PROJECT_MANAGER", "TEAM_MEMBER", "OBSERVER"]),
-    ,
+      .isIn(["PROJECT_MANAGER","PROGRAM_MANAGER", "TEAM_MEMBER", "OBSERVER"]),
     validate,
   ],
   asyncHandler(async (req: any, res: any) => {
