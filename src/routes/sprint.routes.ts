@@ -2,7 +2,7 @@ import { Router } from "express";
 import { check } from "express-validator";
 import { asyncHandler } from "../utils/common.utils";
 import { validate } from "../middleware/error.middleware";
-import { authenticate } from "../middleware/auth.middleware";
+import { authenticate, authorize } from "../middleware/auth.middleware";
 import { checkProjectPermission } from "../middleware/permission.middleware";
 import {
   createSprint,
@@ -28,6 +28,7 @@ const router = Router();
 router.post(
   "/projects/:projectId/sprints",
   authenticate,
+    authorize(["ADMIN", "PROGRAM_MANAGER","PROJECT_MANAGER", "TEAM_MEMBER", "OBSERVER"]),
   checkProjectPermission("sprint.create"),
   [
     check("name", "Sprint name is required").notEmpty().trim(),
@@ -81,6 +82,7 @@ router.post(
 router.get(
   "/projects/:projectId/sprints",
   authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER","PROJECT_MANAGER", "TEAM_MEMBER", "OBSERVER"]),
   checkProjectPermission("project.view"),
   [
     check("status", "Invalid sprint status")
@@ -114,6 +116,7 @@ router.get(
 router.get(
   "/projects/:projectId/sprints/active",
   authenticate,
+    authorize(["ADMIN", "PROGRAM_MANAGER","PROJECT_MANAGER", "TEAM_MEMBER", "OBSERVER"]),
   checkProjectPermission("project.view"),
   asyncHandler(async (req: any, res: any) => {
     const { projectId } = req.params;
@@ -135,6 +138,7 @@ router.get(
 router.get(
   "/sprints/:sprintId",
   authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER","PROJECT_MANAGER", "TEAM_MEMBER", "OBSERVER"]),
   checkProjectPermission("project.view"),
   asyncHandler(async (req: any, res: any) => {
     const { sprintId } = req.params;
@@ -156,6 +160,7 @@ router.get(
 router.get(
   "/sprints/:sprintId/board",
   authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER","PROJECT_MANAGER", "TEAM_MEMBER", "OBSERVER"]),
   checkProjectPermission("project.view"),
   asyncHandler(async (req: any, res: any) => {
     const { sprintId } = req.params;
@@ -177,6 +182,7 @@ router.get(
 router.put(
   "/sprints/:sprintId",
   authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER","PROJECT_MANAGER", "TEAM_MEMBER", "OBSERVER"]),
   checkProjectPermission("sprint.edit"),
   [
     check("name", "Sprint name must be between 1 and 100 characters")
@@ -228,6 +234,7 @@ router.put(
 router.delete(
   "/sprints/:sprintId",
   authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER","PROJECT_MANAGER", "TEAM_MEMBER", "OBSERVER"]),
   checkProjectPermission("sprint.delete"),
   asyncHandler(async (req: any, res: any) => {
     const { sprintId } = req.params;

@@ -16,7 +16,7 @@ const router = Router();
 /**
  * @route   GET /api/users
  * @desc    Get all users
- * @access  Private/Admin
+ * @access  Admin, Program Manager, Project Manager, Team Member
  */
 router.get(
   "/",

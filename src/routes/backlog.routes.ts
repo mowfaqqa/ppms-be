@@ -2,7 +2,7 @@ import { Router } from "express";
 import { check } from "express-validator";
 import { asyncHandler } from "../utils/common.utils";
 import { validate } from "../middleware/error.middleware";
-import { authenticate } from "../middleware/auth.middleware";
+import { authenticate, authorize } from "../middleware/auth.middleware";
 import { checkProjectPermission } from "../middleware/permission.middleware";
 import {
   createBacklogItem,
@@ -145,6 +145,7 @@ router.get(
 router.get(
   "/projects/:projectId/backlog/stats",
   authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER","PROJECT_MANAGER", "TEAM_MEMBER", "OBSERVER"]),
   checkProjectPermission("project.view"),
   asyncHandler(async (req: any, res: any) => {
     const { projectId } = req.params;

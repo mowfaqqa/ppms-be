@@ -4,7 +4,7 @@ import { ApiError, HttpStatus } from "../utils/error.utils";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
-
+const SESSION_TIMEOUT_MS = 5 * 60 * 1000;
 // Extend Express Request type
 declare global {
   namespace Express {
@@ -43,7 +43,7 @@ export const authenticate = async (
 
     const decoded = verifyToken(token);
 
-    // Check if user exists
+    // Check if user exists and is active
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
     });
@@ -52,6 +52,9 @@ export const authenticate = async (
       throw new ApiError(HttpStatus.UNAUTHORIZED, "User not found");
     }
 
+    if (!user.isActive) {
+      throw new ApiError(HttpStatus.UNAUTHORIZED, "Account is inactive");
+    }
     // Set user info in request
     req.user = {
       userId: decoded.userId,
