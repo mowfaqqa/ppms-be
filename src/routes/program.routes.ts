@@ -28,7 +28,7 @@ const router = Router();
 router.post(
   "/",
   authenticate,
-  authorize(["ADMIN", "PROGRAM_MANAGER"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER","PROJECT_MANAGER"]),
   [
     check("name", "Name is required").notEmpty(),
     check("portfolioId", "Portfolio ID is required").notEmpty(),
