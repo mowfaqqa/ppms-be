@@ -598,17 +598,19 @@ router.get(
         },
       });
 
-      // Group projects by status
+      // Group projects by status with schedule awareness
+      const now = new Date();
       const projectsByStatus: any = {
+        ON_SCHEDULE: [],
+        BEHIND_SCHEDULE: [],
         PLANNING: [],
-        IN_PROGRESS: [],
         ON_HOLD: [],
         COMPLETED: [],
         CANCELLED: [],
       };
 
       projects.forEach((project) => {
-        projectsByStatus[project.status].push({
+        const projectData = {
           id: project.id,
           name: project.name,
           description: project.description,
@@ -618,13 +620,29 @@ router.get(
           taskCount: project._count.tasks,
           portfolio: project.portfolio,
           program: project.program,
-        });
+        };
+
+        // For IN_PROGRESS projects, categorize by schedule
+        if (project.status === 'IN_PROGRESS') {
+          const endDate = new Date(project.endDate);
+          const isOnSchedule = now <= endDate;
+          
+          if (isOnSchedule) {
+            projectsByStatus.ON_SCHEDULE.push(projectData);
+          } else {
+            projectsByStatus.BEHIND_SCHEDULE.push(projectData);
+          }
+        } else {
+          // For other statuses, use original status
+          projectsByStatus[project.status].push(projectData);
+        }
       });
 
       // Get status distribution counts
       const statusDistribution = {
+        ON_SCHEDULE: projectsByStatus.ON_SCHEDULE.length,
+        BEHIND_SCHEDULE: projectsByStatus.BEHIND_SCHEDULE.length,
         PLANNING: projectsByStatus.PLANNING.length,
-        IN_PROGRESS: projectsByStatus.IN_PROGRESS.length,
         ON_HOLD: projectsByStatus.ON_HOLD.length,
         COMPLETED: projectsByStatus.COMPLETED.length,
         CANCELLED: projectsByStatus.CANCELLED.length,
@@ -921,32 +939,51 @@ router.get(
         },
       });
 
-      // Group programs by status (Active: Planning + In Progress vs Completed)
+      // Group programs by status with schedule awareness
+      const now = new Date();
       const programsByStatus: any = {
-        ACTIVE: [],
+        ON_SCHEDULE: [],
+        BEHIND_SCHEDULE: [],
+        PLANNING: [],
         COMPLETED: [],
+        ON_HOLD: [],
       };
 
       programs.forEach((program) => {
-        const isActive = program.status === 'PLANNING' || program.status === 'IN_PROGRESS';
-        const statusKey = isActive ? 'ACTIVE' : 'COMPLETED';
-        
-        programsByStatus[statusKey].push({
+        const programData = {
           id: program.id,
           name: program.name,
           description: program.description,
+          status: program.status,
           startDate: program.startDate,
           endDate: program.endDate,
-          status: program.status,
           projectCount: program._count.projects,
           portfolio: program.portfolio,
-        });
+        };
+
+        // For IN_PROGRESS programs, categorize by schedule
+        if (program.status === 'IN_PROGRESS') {
+          const endDate = new Date(program.endDate);
+          const isOnSchedule = now <= endDate;
+          
+          if (isOnSchedule) {
+            programsByStatus.ON_SCHEDULE.push(programData);
+          } else {
+            programsByStatus.BEHIND_SCHEDULE.push(programData);
+          }
+        } else {
+          // For other statuses, use original status
+          programsByStatus[program.status].push(programData);
+        }
       });
 
       // Get status distribution counts
       const statusDistribution = {
-        ACTIVE: programsByStatus.ACTIVE.length,
+        ON_SCHEDULE: programsByStatus.ON_SCHEDULE.length,
+        BEHIND_SCHEDULE: programsByStatus.BEHIND_SCHEDULE.length,
+        PLANNING: programsByStatus.PLANNING.length,
         COMPLETED: programsByStatus.COMPLETED.length,
+        ON_HOLD: programsByStatus.ON_HOLD.length,
       };
 
       res.status(200).json({

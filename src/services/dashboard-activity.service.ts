@@ -145,52 +145,121 @@ async function getAuditLogActivities(
   requesterId: string
 ): Promise<UnifiedActivity[]> {
   const where: any = {};
+  const andConditions: any[] = [];
 
-  // Apply date filter
-  if (Object.keys(dateFilter).length > 0) {
-    where.timestamp = dateFilter;
-  }
-
-  // Apply user filter
-  if (filters.userId) {
-    where.userId = filters.userId;
-  }
-
-  // Apply entity type filter
-  if (filters.entityType) {
-    where.entityType = filters.entityType;
-  }
-
-  // Apply entity ID filter
-  if (filters.entityId) {
-    where.entityId = filters.entityId;
-  }
-
-  // Program managers can only see logs for their portfolios/programs/projects
-  if (requesterRole === "PROGRAM_MANAGER") {
-    // Get portfolios where user can manage programs
-    // For now, program managers see everything (you can add more specific logic)
-  }
-
-  // Project managers can only see logs for their projects
-  if (requesterRole === "PROJECT_MANAGER") {
+ if (requesterRole === "PROJECT_MANAGER") {
     const projectIds = await prisma.projectMember.findMany({
       where: { userId: requesterId },
       select: { projectId: true },
     });
 
+    const allowedProjectIds = projectIds.map(p => p.projectId);
+
     const taskIds = await prisma.task.findMany({
-      where: { projectId: { in: projectIds.map((p) => p.projectId) } },
+      where: { projectId: { in: allowedProjectIds } },
       select: { id: true },
     });
 
-    where.OR = [
-      {
-        entityType: "PROJECT",
-        entityId: { in: projectIds.map((p) => p.projectId) },
+    const allowedTaskIds = taskIds.map(t => t.id);
+
+    andConditions.push({
+      OR: [
+        {
+          entityType: "PROJECT",
+          entityId: { in: allowedProjectIds },
+        },
+        {
+          entityType: "TASK",
+          entityId: { in: allowedTaskIds },
+        },
+      ],
+    });
+  }
+
+  if (requesterRole === "PROGRAM_MANAGER") {
+    const programIds = await prisma.portfolio.findMany({
+      where: {
+        programManagers: {
+          some: { id: requesterId },
+        },
       },
-      { entityType: "TASK", entityId: { in: taskIds.map((t) => t.id) } },
-    ];
+      select: { id: true },
+    });
+
+    const allowedProgramIds = programIds.map(p => p.id);
+
+    const projectIds = await prisma.project.findMany({
+      where: {
+        programId: { in: allowedProgramIds },
+      },
+      select: { id: true },
+    });
+
+    const allowedProjectIds = projectIds.map(p => p.id);
+
+    const taskIds = await prisma.task.findMany({
+      where: {
+        projectId: { in: allowedProjectIds },
+      },
+      select: { id: true },
+    });
+
+    const allowedTaskIds = taskIds.map(t => t.id);
+
+    andConditions.push({
+      OR: [
+        {
+          entityType: "PROGRAM",
+          entityId: { in: allowedProgramIds },
+        },
+        {
+          entityType: "PROJECT",
+          entityId: { in: allowedProjectIds },
+        },
+        {
+          entityType: "TASK",
+          entityId: { in: allowedTaskIds },
+        },
+      ],
+    });
+  }
+
+  if (filters.userId) {
+    andConditions.push({ userId: filters.userId });
+  }
+
+  if (filters.entityType) {
+    andConditions.push({ entityType: filters.entityType });
+  }
+
+  if (filters.entityId) {
+    andConditions.push({ entityId: filters.entityId });
+  }
+
+  if (filters.action) {
+    andConditions.push({ action: filters.action });
+  }
+
+  if (filters.startDate || filters.endDate) {
+    andConditions.push({
+      timestamp: {
+        ...(filters.startDate && { gte: filters.startDate }),
+        ...(filters.endDate && { lte: filters.endDate }),
+      },
+    });
+  }
+
+  if (filters.search) {
+    andConditions.push({
+      OR: [
+        { description: { contains: filters.search, mode: "insensitive" } },
+        { entityName: { contains: filters.search, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  if (andConditions.length > 0) {
+    where.AND = andConditions;
   }
 
   const logs = await prisma.auditLog.findMany({

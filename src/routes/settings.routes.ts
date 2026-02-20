@@ -304,7 +304,7 @@ router.post(
 router.get(
   "/audit-trail",
   authenticate,
-  authorize(["ADMIN", "PROJECT_MANAGER"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
   [
     check("userId", "Invalid user ID format").optional(),
     check("entityType", "Invalid entity type")

@@ -122,9 +122,11 @@ router.get(
   asyncHandler(async (req: any, res: any) => {
     const { limit } = req.query;
 
+    const limitValue= Number(limit) || 10;
+
     const result = await getUserNotifications(req.user!.userId, {
       read: false,
-      limit: limit || 20,
+      limit: limitValue,
       page: 1,
     });
 

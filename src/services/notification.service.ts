@@ -23,6 +23,7 @@ export const getUserNotifications = async (
   } = {}
 ) => {
   const { read, type, priority, page = 1, limit = 20 } = filters;
+  const limitParsed = Number(limit);
 
   const where: any = { userId };
 
@@ -46,8 +47,8 @@ export const getUserNotifications = async (
         { priority: "desc" }, // High priority first
         { createdAt: "desc" }, // Newest first
       ],
-      skip: (page - 1) * limit,
-      take: limit,
+      skip: (page - 1) * limitParsed,
+      take: limitParsed,
       include: {
         actor: {
           select: {

@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { ApiError, HttpStatus } from '../utils/error.utils';
 import cloudinary from '../config/cloudinary';
 import { generateUniqueId } from '../utils/common.utils';
+import { notifyFileUploaded } from './notification.service';
 import fs from 'fs';
 
 const prisma = new PrismaClient();
@@ -131,6 +132,59 @@ export const uploadFile = async (
 
     // Delete local file
     fs.unlinkSync(file?.path);
+
+    // 🔔 Send notification to project managers
+    try {
+      let projectId = data.projectId;
+      
+      // If file uploaded to task, get project from task
+      if (!projectId && data.taskId) {
+        const task = await prisma.task.findUnique({
+          where: { id: data.taskId },
+          select: { projectId: true }
+        });
+        projectId = task?.projectId;
+      }
+
+      if (projectId) {
+        const project = await prisma.project.findUnique({
+          where: { id: projectId },
+          include: {
+            members: {
+              where: { role: 'PROJECT_MANAGER' },
+              select: { userId: true }
+            }
+          }
+        });
+
+        if (project && project.members.length > 0) {
+          // Get uploader's name
+          const uploader = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true }
+          });
+
+          // Notify only project managers (exclude the uploader)
+          const pmIds = project.members
+            .map(m => m.userId)
+            .filter(id => id !== userId);
+
+          if (pmIds.length > 0) {
+            await notifyFileUploaded(
+              pmIds,
+              savedFile.id,
+              savedFile.name,
+              project.name,
+              userId,
+              uploader?.name || 'Someone'
+            );
+          }
+        }
+      }
+    } catch (notificationError) {
+      console.error('Failed to send file upload notification:', notificationError);
+      // Don't fail the upload if notification fails
+    }
 
     return savedFile;
   } catch (error) {

@@ -1339,21 +1339,42 @@ export const updateTask = async (
     return updated;
   });
 
-  // ✅ FIXED: Create notifications AFTER transaction with correct parameters
   const assigneeIds = task.assignments.map((a) => a.userId);
 
   // Notify about status change
-  if (data.status && data.status !== task.status && assigneeIds.length > 0) {
+  if (data.status && data.status !== task.status) {
     try {
-      await notifyTaskStatusChange(
-        assigneeIds.filter((id) => id !== userId), // Don't notify the user who made the change
-        id,
-        task.title,
-        task.status,
-        data.status,
-        userId,
-        currentUser.name
-      );
+      // Get all users to notify (assignees + PMs)
+      const usersToNotify = [...assigneeIds];
+      
+      // If task completed, also notify project managers
+      if (data.status === 'COMPLETED') {
+        const projectManagers = await prisma.projectMember.findMany({
+          where: {
+            projectId: task.projectId,
+            role: 'PROJECT_MANAGER'
+          },
+          select: { userId: true }
+        });
+        
+        const pmIds = projectManagers.map(pm => pm.userId);
+        usersToNotify.push(...pmIds);
+      }
+      
+      // Remove duplicates and exclude the user who made the change
+      const uniqueUserIds = [...new Set(usersToNotify)].filter(id => id !== userId);
+      
+      if (uniqueUserIds.length > 0) {
+        await notifyTaskStatusChange(
+          uniqueUserIds,
+          id,
+          task.title,
+          task.status,
+          data.status,
+          userId,
+          currentUser.name
+        );
+      }
     } catch (error) {
       console.error("Failed to create status change notification:", error);
     }
