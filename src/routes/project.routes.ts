@@ -92,6 +92,7 @@ router.post(
 router.get(
   "/",
   authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER","PROJECT_MANAGER", "TEAM_MEMBER", "OBSERVER"]),
   asyncHandler(async (req: any, res: any) => {
     const { portfolioId, status, search, standalone } = req.query;
 

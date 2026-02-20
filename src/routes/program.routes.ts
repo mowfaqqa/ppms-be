@@ -28,7 +28,7 @@ const router = Router();
 router.post(
   "/",
   authenticate,
-  authorize(["ADMIN", "PROGRAM_MANAGER","PROJECT_MANAGER"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER","PROJECT_MANAGER", "TEAM_MEMBER", "OBSERVER"]),
   [
     check("name", "Name is required").notEmpty(),
     check("portfolioId", "Portfolio ID is required").notEmpty(),
@@ -75,6 +75,7 @@ router.post(
 router.get(
   "/",
   authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER", "TEAM_MEMBER", "OBSERVER"]),
   [
     check("portfolioId", "Invalid portfolio ID format").optional(),
     check("status", "Invalid status")
@@ -112,7 +113,7 @@ router.get(
 router.get(
   "/:id",
   authenticate,
-  authorize(["ADMIN", "PROGRAM_MANAGER"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER", "TEAM_MEMBER", "OBSERVER"]),
   checkProgramPermission(),
   asyncHandler(async (req: any, res: any) => {
     const { id } = req.params;
@@ -140,7 +141,7 @@ router.get(
 router.put(
   "/:id",
   authenticate,
-  authorize(["ADMIN", "PROGRAM_MANAGER"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
   [
     check("name", "Name must not be empty if provided").optional().notEmpty(),
     check("startDate", "Start date must be valid")
@@ -194,7 +195,7 @@ router.delete(
   "/:id",
   authenticate,
   checkProgramPermission(),
-  authorize(["ADMIN", "PROGRAM_MANAGER"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
   auditLog({
     action: AuditAction.DELETED,
     entityType: EntityType.PROGRAM,
