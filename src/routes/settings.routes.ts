@@ -54,6 +54,7 @@ router.post(
     check("role", "Role must be either PROJECT_MANAGER or TEAM_MEMBER").isIn([
       "PROJECT_MANAGER",
       "TEAM_MEMBER",
+      "PROGRAM_MANAGER"
     ]),
     validate,
   ],
