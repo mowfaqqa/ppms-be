@@ -49,6 +49,7 @@ export const checkProjectPermission = (permission: string) => {
           projectId: projectId,
           OR: [
             { role: "PROJECT_MANAGER" },
+            { role: "TEAM_MEMBER" },
             {
               permissions: {
                 some: {
@@ -146,6 +147,62 @@ export const checkTaskPermission = (permission: string) => {
         return next();
       }
 
+      if (permission === "task.create") {
+        const projectId = req.body.projectId;
+
+        if (!projectId) {
+          throw new ApiError(HttpStatus.BAD_REQUEST, "Project ID is required");
+        }
+
+        // Program Manager → portfolio access
+        if (req.user.role === "PROGRAM_MANAGER") {
+          const project = await prisma.project.findFirst({
+            where: {
+              id: projectId,
+              portfolio: {
+                programManagers: {
+                  some: { id: req.user.userId },
+                },
+              },
+            },
+          });
+
+          if (!project) {
+            throw new ApiError(
+              HttpStatus.FORBIDDEN,
+              "You don't have access to this project"
+            );
+          }
+
+          return next();
+        }
+
+        // Project Manager or permission-based member
+        const projectMember = await prisma.projectMember.findFirst({
+          where: {
+            projectId,
+            userId: req.user.userId,
+            OR: [
+              { role: "PROJECT_MANAGER" },
+              {
+                permissions: {
+                  some: { name: permission },
+                },
+              },
+            ],
+          },
+        });
+
+        if (!projectMember) {
+          throw new ApiError(
+            HttpStatus.FORBIDDEN,
+            `You don't have ${permission} permission for this project`
+          );
+        }
+
+        return next();
+      }
+
       const taskId = req.params.taskId ?? req.params.id ?? req.body.taskId;
 
       if (!taskId) {
@@ -202,6 +259,7 @@ export const checkTaskPermission = (permission: string) => {
           projectId: projectId,
           OR: [
             { role: "PROJECT_MANAGER" },
+            { role: "TEAM_MEMBER" },
             {
               permissions: {
                 some: {

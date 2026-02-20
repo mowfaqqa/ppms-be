@@ -101,7 +101,7 @@ router.get(
   "/",
   authenticate,
   asyncHandler(async (req: any, res: any) => {
-    const { projectId, status, priority, assigneeId, parentTaskId, search } =
+    const { projectId, status, priority, assigneeId, parentTaskId, search, filter } =
       req.query;
 
     const tasks = await getAllTasks({
@@ -111,6 +111,7 @@ router.get(
       assigneeId: assigneeId as string,
       parentTaskId: parentTaskId === "null" ? null : (parentTaskId as string),
       search: search as string,
+      filter: filter as string,
     }, 
     {
       userId: req.user.userId,

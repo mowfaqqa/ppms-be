@@ -67,6 +67,19 @@ export const getProjectScope = (user: { role: Role; userId: string }) => {
     };
   }
 
+  if (user.role === "TEAM_MEMBER") {
+    return {
+      project: {
+        members: {
+          some: {
+            userId: user.userId,
+            role: "TEAM_MEMBER",
+          },
+        },
+      },
+    };
+  }
+
   return {}; // ADMIN
 }
 
@@ -77,6 +90,17 @@ export const getNestedProjectScope = (user: { role: Role; userId: string }) => {
         some: {
           userId: user.userId,
           role: "PROJECT_MANAGER",
+        },
+      },
+    };
+  }
+
+  if (user.role === "TEAM_MEMBER") {
+    return {
+      members: {
+        some: {
+          userId: user.userId,
+          role: "TEAM_MEMBER",
         },
       },
     };
@@ -99,6 +123,19 @@ export const getTaskScope = (user: { role: Role; userId: string }) => {
           some: {
             userId: user.userId,
             role: "PROJECT_MANAGER",
+          },
+        },
+      },
+    };
+  }
+  
+  if (user.role === "TEAM_MEMBER") {
+    return {
+      project: {
+        members: {
+          some: {
+            userId: user.userId,
+            role: "TEAM_MEMBER",
           },
         },
       },

@@ -8,7 +8,10 @@ import {
   getDashboardActivities,
   getActivityStats,
   getRecentActivitySummary,
-  getScheduleOverview
+  getScheduleOverview,
+  getTeamMemberStats,
+  getTeamMemberTaskChartData,
+  getTeamMemberProjectChartData
 } from "../services/dashboard-activity.service";
 import { getPortfolioScope, getNestedPortfolioScope } from "../utils/check-access.util";
 
@@ -22,7 +25,7 @@ const router = Router();
 router.get(
   "/dashboard/stats",
   authenticate,
-  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER", "TEAM_MEMBER"]),
   asyncHandler(async (req: any, res: any) => {
     const { PrismaClient } = require("@prisma/client");
     const prisma = new PrismaClient();
@@ -1070,4 +1073,60 @@ router.get(
   })
 );
 
+/**
+ * @route   GET /api/dashboard/team-member/stats
+ * @desc    Get team member dashboard statistics
+ * @access  Private (Team Member only)
+ */
+router.get(
+  "/dashboard/team-member/stats",
+  authenticate,
+  authorize(["TEAM_MEMBER"]),
+  asyncHandler(async (req: any, res: any) => {
+    const stats = await getTeamMemberStats(req.user!.userId);
+
+    res.status(200).json({
+      success: true,
+      data: stats,
+    });
+  })
+);
+
+/**
+ * @route   GET /api/dashboard/team-member/tasks/stats
+ * @desc    Get team member task chart data
+ * @access  Private (Team Member only)
+ */
+router.get(
+  "/dashboard/team-member/tasks/stats",
+  authenticate,
+  authorize(["TEAM_MEMBER"]),
+  asyncHandler(async (req: any, res: any) => {
+    const chartData = await getTeamMemberTaskChartData(req.user!.userId);
+
+    res.status(200).json({
+      success: true,
+      data: chartData,
+    });
+  })
+);
+
+/**
+ * @route   GET /api/dashboard/team-member/projects/stats
+ * @desc    Get team member project chart data
+ * @access  Private (Team Member only)
+ */
+router.get(
+  "/dashboard/team-member/projects/stats",
+  authenticate,
+  authorize(["TEAM_MEMBER"]),
+  asyncHandler(async (req: any, res: any) => {
+    const chartData = await getTeamMemberProjectChartData(req.user!.userId);
+
+    res.status(200).json({
+      success: true,
+      data: chartData,
+    });
+  })
+);
 export default router;
