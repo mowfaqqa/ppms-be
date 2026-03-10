@@ -971,6 +971,7 @@ export const getAllTasks = async (filters?: {
   assigneeId?: string;
   parentTaskId?: string | null;
   search?: string;
+  filter?: string;
 }, user?: {
   role: Role
   userId: string;
@@ -997,6 +998,34 @@ export const getAllTasks = async (filters?: {
         userId: filters.assigneeId,
       },
     };
+  }
+
+  if (filters?.filter) {
+    const now = new Date();
+
+    if (filters.filter === "due-soon") {
+      const sevenDaysFromNow = new Date();
+      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+      where.endDate = {
+        gte: now,
+        lte: sevenDaysFromNow,
+      };
+
+      where.status = {
+        not: "COMPLETED",
+      };
+    }
+
+    if (filters.filter === "overdue") {
+      where.endDate = {
+        lt: now,
+      };
+
+      where.status = {
+        not: "COMPLETED",
+      };
+    }
   }
 
   // Filter for top-level tasks or subtasks

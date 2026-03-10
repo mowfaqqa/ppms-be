@@ -16,12 +16,12 @@ const router = Router();
 /**
  * @route   GET /api/users
  * @desc    Get all users
- * @access  Private/Admin
+ * @access  Admin, Program Manager, Project Manager, Team Member
  */
 router.get(
   "/",
   authenticate,
-  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER", "TEAM_MEMBER"]),
   asyncHandler(async (req: any, res: any) => {
     const users = await getAllUsers();
 
@@ -61,45 +61,33 @@ router.get(
 );
 
 /**
- * @route   PUT /api/users/:id
+ * @route   PUT /api/users/update/profile
  * @desc    Update user
- * @access  Private
+ * @access  Public
  */
 router.put(
-  "/:id",
+  "/update/profile",
   authenticate,
   [
     check("name", "Name is required").optional().notEmpty(),
     check("email", "Please include a valid email").optional().isEmail(),
-    check("password", "Password must be at least 6 characters")
+    check("currentPassword", "Current password is required when changing password")
+      .if(check("newPassword").exists())
+      .notEmpty(),
+    check("newPassword", "New password must be at least 6 characters")
       .optional()
       .isLength({ min: 6 }),
     validate,
   ],
   asyncHandler(async (req: any, res: any) => {
-    const { id } = req.params;
-    const { name, email, password, role } = req.body;
+    const { name, email, currentPassword, newPassword, role } = req.body;
+    const { userId } = req.user;
 
-    // Only admins can update other users' profiles
-    if (id !== req.user?.userId && req.user?.role !== "ADMIN") {
-      return res.status(403).json({
-        success: false,
-        message: "Not authorized to update this user",
-      });
-    }
-
-    // Only admins can update roles
-    if (role && req.user?.role !== "ADMIN") {
-      return res.status(403).json({
-        success: false,
-        message: "Not authorized to update user role",
-      });
-    }
-
-    const user = await updateUser(id, {
+    const user = await updateUser(userId, {
       name,
       email,
-      password,
+      currentPassword,
+      newPassword,
       role,
     });
 
