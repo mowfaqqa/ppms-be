@@ -36,7 +36,6 @@ router.post(
     const userWithPermissions = {
       ...result.user,
       permissions: getPermissionsForRole(result.user.role),
-      req
     };
 
     res.status(201).json({
