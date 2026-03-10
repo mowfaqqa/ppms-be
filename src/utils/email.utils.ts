@@ -416,3 +416,165 @@ export const sendAccountReactivatedEmail = async (
     console.error("Failed to send account reactivation notification:", error);
   }
 };
+
+/**
+ * Send password reset request email with token link
+ */
+export const sendPasswordResetEmail = async (
+  email: string,
+  name: string,
+  resetToken: string
+): Promise<void> => {
+  if (!process.env.EMAIL_FROM) {
+    console.warn("Email notifications not configured - EMAIL_FROM not set");
+    return;
+  }
+
+  const appName = process.env.APP_NAME || "Project Management System";
+  const appUrl = process.env.APP_URL || "http://localhost:3000";
+  const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
+
+  try {
+    await sendMailTransporter(() => {
+      const subject = `${appName} - Password Reset Request`;
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background-color: #800000; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+              .content { background-color: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
+              .button { display: inline-block; background-color: #800000; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
+              .warning { background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px; }
+              .token-box { background-color: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; margin: 20px 0; word-break: break-all; font-family: 'Courier New', monospace; font-size: 13px; color: #4b5563; }
+              .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>Password Reset Request</h1>
+            </div>
+            <div class="content">
+              <p>Hello ${name},</p>
+              <p>We received a request to reset your password for your ${appName} account. Click the button below to set a new password.</p>
+
+              <div style="text-align: center;">
+                <a href="${resetUrl}" class="button">Reset My Password</a>
+              </div>
+
+              <p>Or copy and paste this link into your browser:</p>
+              <div class="token-box">${resetUrl}</div>
+
+              <div class="warning">
+                <strong>⚠️ Important:</strong>
+                <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+                  <li>This link expires in <strong>30 minutes</strong>.</li>
+                  <li>It can only be used once.</li>
+                  <li>If you did not request this reset, you can safely ignore this email — your password will not change.</li>
+                </ul>
+              </div>
+
+              <p>Best regards,<br>The ${appName} Team</p>
+            </div>
+            <div class="footer">
+              <p>This is an automated message. Please do not reply to this email.</p>
+            </div>
+          </body>
+        </html>
+      `;
+
+      const textContent = `
+        Password Reset Request - ${appName}
+
+        Hello ${name},
+
+        We received a request to reset your password. Use the link below:
+
+        ${resetUrl}
+
+        This link expires in 30 minutes and can only be used once.
+
+        If you did not request this, ignore this email — your password won't change.
+
+        Best regards,
+        The ${appName} Team
+      `;
+
+      return { to: email, subject, html: htmlContent, text: textContent };
+    });
+
+    console.log(`Password reset email sent to ${email}`);
+  } catch (error) {
+    console.error(`Failed to send password reset email to ${email}:`, error);
+    throw new Error("Failed to send password reset email");
+  }
+};
+
+/**
+ * Send confirmation email after a successful password reset
+ */
+export const sendPasswordResetSuccessEmail = async (
+  email: string,
+  name: string
+): Promise<void> => {
+  if (!process.env.EMAIL_FROM) return;
+
+  const appName = process.env.APP_NAME || "Project Management System";
+  const appUrl = process.env.APP_URL || "http://localhost:3000";
+
+  try {
+    await sendMailTransporter(() => {
+      const subject = `${appName} - Password Reset Successful`;
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background-color: #10b981; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+              .content { padding: 30px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
+              .button { display: inline-block; background-color: #800000; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
+              .alert { background-color: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; border-radius: 4px; }
+              .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h2>✅ Password Reset Successful</h2>
+              </div>
+              <div class="content">
+                <p>Hello ${name},</p>
+                <p>Your password has been successfully reset. You can now log in with your new password.</p>
+
+                <div style="text-align: center;">
+                  <a href="${appUrl}/login" class="button">Go to Login</a>
+                </div>
+
+                <div class="alert">
+                  <strong>Wasn't you?</strong> If you did not reset your password, contact your administrator immediately — your account may be compromised.
+                </div>
+
+                <p>Best regards,<br>The ${appName} Team</p>
+              </div>
+              <div class="footer">
+                <p>This is an automated notification.</p>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      return { to: email, subject, html: htmlContent };
+    });
+  } catch (error) {
+    console.error("Failed to send password reset success email:", error);
+  }
+};

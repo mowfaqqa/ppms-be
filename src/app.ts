@@ -25,7 +25,7 @@ import backlogRoutes from "./routes/backlog.routes";
 import dashboardRoutes from "./routes/dashboard-activity.routes";
 import settingsRoutes from "./routes/settings.routes";
 import searchRoutes from "./routes/search.routes";
-
+import passwordResetRouter from "./routes/password-reset.routes";
 // Load environment variables
 config();
 
@@ -56,6 +56,7 @@ app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/auth", passwordResetRouter);
 app.use("/api/users", userRoutes);
 app.use("/api/years", yearRoutes);
 app.use("/api/portfolios", portfolioRoutes);
