@@ -138,7 +138,14 @@ export const getProjectSprints = async (
               },
             },
           }
-        : {}),
+        : {
+          members: {
+              some: {
+                userId: user.userId,
+                role: "TEAM_MEMBER",
+              },
+            },
+        }),
     },
     select: { id: true },
   });

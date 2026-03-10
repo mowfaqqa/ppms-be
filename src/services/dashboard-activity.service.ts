@@ -944,3 +944,375 @@ export const getScheduleOverview = async (
     },
   };
 };
+
+/**
+ * Get Team Member Dashboard Statistics
+ * Returns comprehensive stats for team members including tasks, projects, and performance metrics
+ */
+export const getTeamMemberStats = async (userId: string) => {
+  // Get all tasks assigned to team member
+  const tasks = await prisma.task.findMany({
+    where: {
+      assignments: {
+        some: {
+          userId: userId,
+        },
+      },
+    },
+    include: {
+      project: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+  // Get all projects team member is part of
+  const projects = await prisma.project.findMany({
+    where: {
+      members: {
+        some: {
+          userId: userId,
+          role: 'TEAM_MEMBER',
+        },
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      startDate: true,
+      endDate: true,
+    },
+  });
+
+  // Calculate task statistics
+  const totalTasks = tasks.length;
+  
+  const tasksByStatus = tasks.reduce((acc, task) => {
+    acc[task.status] = (acc[task.status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const tasksByPriority = tasks.reduce((acc, task) => {
+    acc[task.priority] = (acc[task.priority] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Get completed tasks
+  const completedTasks = tasks.filter(t => t.status === 'COMPLETED').length;
+
+  // Get tasks due soon (within 7 days)
+  const sevenDaysFromNow = new Date();
+  sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+  
+  const tasksDueSoon = tasks.filter(task => {
+    if (!task.endDate) return false;
+    const dueDate = new Date(task.endDate);
+    const now = new Date();
+    return dueDate >= now && dueDate <= sevenDaysFromNow && task.status !== 'COMPLETED';
+  }).length;
+
+  // Get overdue tasks
+  const now = new Date();
+  const overdueTasks = tasks.filter(task => {
+    if (!task.endDate) return false;
+    const dueDate = new Date(task.endDate);
+    return dueDate < now && task.status !== 'COMPLETED';
+  }).length;
+
+  // Calculate project statistics
+  const totalProjects = projects.length;
+  
+  const projectsByStatus = projects.reduce((acc, project) => {
+    acc[project.status] = (acc[project.status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Get active projects
+  const activeProjects = projects.filter(p => 
+    p.status === 'IN_PROGRESS' || p.status === 'PLANNING'
+  ).length;
+
+  // Calculate performance metrics for this week
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+  const completedThisWeek = await prisma.taskActivity.count({
+    where: {
+      type: 'STATUS_CHANGED',
+      task: {
+        assignments: {
+          some: {
+            userId: userId,
+          },
+        },
+      },
+      createdAt: {
+        gte: oneWeekAgo,
+      },
+      metadata: {
+        path: ['to'],
+        equals: 'COMPLETED',
+      },
+    },
+  });
+
+  // Get recent projects (last 3 active projects)
+  const recentProjects = projects
+    .filter(p => p.status === 'IN_PROGRESS' || p.status === 'ON_HOLD')
+    .slice(0, 3)
+    .map(p => ({
+      id: p.id,
+      name: p.name,
+      status: p.status,
+    }));
+
+  // Calculate completion rate
+  const completionRate = totalTasks > 0 
+    ? Math.round((completedTasks / totalTasks) * 100) 
+    : 0;
+
+  return {
+    // Task metrics
+    totalTasks,
+    tasksByStatus,
+    tasksByPriority,
+    completedTasks,
+    tasksDueSoon,
+    overdueTasks,
+    
+    // Project metrics
+    totalProjects,
+    projectsByStatus,
+    activeProjects,
+    
+    // Performance metrics
+    completedThisWeek,
+    completionRate,
+    
+    // Recent activity
+    recentProjects,
+  };
+};
+
+/**
+ * Get Team Member Task Chart Data
+ * Returns detailed task breakdown with expandable sections
+ */
+export const getTeamMemberTaskChartData = async (userId: string) => {
+  const tasks = await prisma.task.findMany({
+    where: {
+      assignments: {
+        some: {
+          userId: userId,
+        },
+      },
+    },
+    include: {
+      project: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      assignments: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+      _count: {
+        select: {
+          subtasks: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+
+  // Group tasks by status
+  const tasksByStatus: Record<string, any[]> = {
+    TODO: [],
+    IN_PROGRESS: [],
+    REVIEW: [],
+    COMPLETED: [],
+    CANCELLED: [],
+  };
+
+  tasks.forEach(task => {
+    if (tasksByStatus[task.status]) {
+      tasksByStatus[task.status].push({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        project: task.project,
+        endDate: task.endDate,
+        subtaskCount: task._count.subtasks,
+      });
+    }
+  });
+
+  // Calculate status distribution
+  const statusDistribution = {
+    TODO: tasksByStatus.TODO.length,
+    IN_PROGRESS: tasksByStatus.IN_PROGRESS.length,
+    REVIEW: tasksByStatus.REVIEW.length,
+    COMPLETED: tasksByStatus.COMPLETED.length,
+    CANCELLED: tasksByStatus.CANCELLED.length,
+  };
+
+  // Group tasks by priority
+  const tasksByPriority: Record<string, any[]> = {
+    LOW: [],
+    MEDIUM: [],
+    HIGH: [],
+    URGENT: [],
+  };
+
+  tasks.forEach(task => {
+    if (tasksByPriority[task.priority]) {
+      tasksByPriority[task.priority].push({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        status: task.status,
+        project: task.project,
+        endDate: task.endDate,
+        subtaskCount: task._count.subtasks,
+      });
+    }
+  });
+
+  // Calculate priority distribution
+  const priorityDistribution = {
+    LOW: tasksByPriority.LOW.length,
+    MEDIUM: tasksByPriority.MEDIUM.length,
+    HIGH: tasksByPriority.HIGH.length,
+    URGENT: tasksByPriority.URGENT.length,
+  };
+
+  return {
+    kind: 'teamMemberTask' as const,
+    summary: {
+      totalTasks: tasks.length,
+    },
+    statusDistribution,
+    priorityDistribution,
+    tasksByStatus,
+    tasksByPriority,
+  };
+};
+
+/**
+ * Get Team Member Project Chart Data
+ * Returns detailed project breakdown with expandable sections
+ */
+export const getTeamMemberProjectChartData = async (userId: string) => {
+  const projects = await prisma.project.findMany({
+    where: {
+      members: {
+        some: {
+          userId: userId,
+          role: 'TEAM_MEMBER',
+        },
+      },
+    },
+    include: {
+      portfolio: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      program: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      _count: {
+        select: {
+          tasks: true,
+          members: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+
+  // Calculate progress for each project
+  const projectsWithProgress = await Promise.all(
+    projects.map(async (project) => {
+      const taskStats = await prisma.task.groupBy({
+        by: ['status'],
+        where: {
+          projectId: project.id,
+        },
+        _count: true,
+      });
+
+      const totalTasks = taskStats.reduce((sum, stat) => sum + stat._count, 0);
+      const completedTasks = taskStats.find(stat => stat.status === 'COMPLETED')?._count || 0;
+      const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+      return {
+        id: project.id,
+        name: project.name,
+        description: project.description,
+        status: project.status,
+        portfolio: project.portfolio,
+        program: project.program,
+        taskCount: project._count.tasks,
+        memberCount: project._count.members,
+        progress,
+      };
+    })
+  );
+
+  // Group projects by status
+  const projectsByStatus: Record<string, any[]> = {
+    PLANNING: [],
+    IN_PROGRESS: [],
+    ON_HOLD: [],
+    COMPLETED: [],
+    CANCELLED: [],
+  };
+
+  projectsWithProgress.forEach(project => {
+    if (projectsByStatus[project.status]) {
+      projectsByStatus[project.status].push(project);
+    }
+  });
+
+  // Calculate status distribution
+  const statusDistribution = {
+    PLANNING: projectsByStatus.PLANNING.length,
+    IN_PROGRESS: projectsByStatus.IN_PROGRESS.length,
+    ON_HOLD: projectsByStatus.ON_HOLD.length,
+    COMPLETED: projectsByStatus.COMPLETED.length,
+    CANCELLED: projectsByStatus.CANCELLED.length,
+  };
+
+  return {
+    kind: 'teamMemberProject' as const,
+    summary: {
+      totalProjects: projects.length,
+      totalTasks: projectsWithProgress.reduce((sum, p) => sum + p.taskCount, 0),
+    },
+    statusDistribution,
+    projectsByStatus,
+  };
+};

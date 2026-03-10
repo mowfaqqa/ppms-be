@@ -146,6 +146,8 @@ export const getAllProjects = async (
     where = { ...where, ...nestedPortfolioScope };
   } else if (user.role === "PROJECT_MANAGER") {
     where = { ...where, ...projectScope };
+  } else if (user.role === "TEAM_MEMBER") {
+    where = { ...where, ...projectScope }
   }
   
   if (filters?.portfolioId) {
@@ -297,6 +299,16 @@ export const updateProject = async (
         some: {
           userId: userId,
           role: "PROJECT_MANAGER",
+        },
+      },
+    };
+  } else if (userRole === "TEAM_MEMBER") {
+    where = {
+      id,
+      members: {
+        some: {
+          userId: userId,
+          role: "TEAM_MEMBER",
         },
       },
     };
@@ -485,6 +497,16 @@ export const deleteProject = async (id: string, userId: string, role: Role,): Pr
         some: {
           userId: userId,
           role: "PROJECT_MANAGER",
+        },
+      },
+    };
+  } else if (role === "TEAM_MEMBER") {
+    whereQuery = {
+      id,
+      members: {
+        some: {
+          userId: userId,
+          role: "TEAM_MEMBER",
         },
       },
     };
@@ -850,9 +872,14 @@ export const updateProjectMemberPermissions = async (
               programManagers: { some: { id: user.userId } },
             },
           }
-        : {
+        : user.role === "PROJECT_MANAGER" 
+        ? {
             id: projectId,
             members: { some: { userId: user.userId, role: "PROJECT_MANAGER" } },
+          }
+        : {
+            id: projectId,
+            members: { some: { userId: user.userId, role: "TEAM_MEMBER" } },
           },
   });
   
@@ -1115,6 +1142,8 @@ export const getProjectComments = async (
     whereQuery = { id: projectId, ...nestedPortfolioScope };
   } else if (user.role === "PROJECT_MANAGER") {
     whereQuery = { id: projectId, ...projectScope };
+  } else if (user.role === "TEAM_MEMBER") {
+    whereQuery = { id: projectId, ...projectScope };
   }
 
   const project = await prisma.project.findFirst({
@@ -1186,6 +1215,8 @@ export const updateProjectComment = async (
     whereQuery = { id: comment.projectId, ...nestedPortfolioScope };
   } else if (user.role === "PROJECT_MANAGER") {
     whereQuery = { id: comment.projectId, ...projectScope};
+  } else if (user.role === "TEAM_MEMBER") {
+    whereQuery = { id: comment.projectId, ...projectScope};
   }
 
   const updatedComment = await prisma.projectComment.update({
@@ -1247,6 +1278,8 @@ export const deleteProjectComment = async (
     whereQuery.project = { id: comment.projectId, ...nestedPortfolioScope };
   } else if (user.role === "PROJECT_MANAGER") {
     whereQuery.project = { id: comment.projectId, ...projectScope };
+  } else if (user.role === "TEAM_MEMBER") {
+    whereQuery.project = { id: comment.projectId, ...projectScope };
   }
 
   const project = await prisma.project.findFirst({
@@ -1296,6 +1329,8 @@ export const getProjectMembers = async (
     whereQuery.portfolio = { programManagers: { some: { id: user.userId } } };
   } else if (user.role === "PROJECT_MANAGER") {
     whereQuery.members = { some: { userId: user.userId, role: "PROJECT_MANAGER" } };
+  } else if (user.role === "TEAM_MEMBER") {
+    whereQuery.members = { some: { userId: user.userId, role: "TEAM_MEMBER" } };
   }
 
   const project = await prisma.project.findFirst({

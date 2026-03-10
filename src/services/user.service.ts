@@ -1,5 +1,5 @@
 import { PrismaClient, Role, User } from "@prisma/client";
-import { hashPassword } from "../utils/password.utils";
+import { hashPassword, comparePassword } from "../utils/password.utils";
 import { ApiError, HttpStatus } from "../utils/error.utils";
 
 const prisma = new PrismaClient();
@@ -74,17 +74,17 @@ export const getUserById = async (id: string): Promise<Partial<User>> => {
 
 // Update user
 export const updateUser = async (
-  id: string,
+  userId: string,
   data: {
     name?: string;
     email?: string;
-    password?: string;
+    currentPassword?: string;
+    newPassword?: string;
     role?: Role;
   }
 ) => {
-  // Check if user exists
   const existingUser = await prisma.user.findUnique({
-    where: { id },
+    where: { id: userId },
   });
 
   if (!existingUser) {
@@ -98,29 +98,51 @@ export const updateUser = async (
     });
 
     if (emailTaken) {
-      throw new ApiError(HttpStatus.CONFLICT, "Email already taken");
+      throw new ApiError(HttpStatus.CONFLICT, "Email already in use");
     }
   }
 
-  // Hash password if provided
-  if (data.password) {
-    data.password = await hashPassword(data.password);
+  // If updating password, verify current password first
+  let hashedNewPassword: string | undefined;
+  if (data.newPassword) {
+    if (!data.currentPassword) {
+      throw new ApiError(
+        HttpStatus.BAD_REQUEST,
+        "Current password is required to change password"
+      );
+    }
+
+    // Verify current password
+    const isPasswordValid = await comparePassword(
+      data.currentPassword,
+      existingUser.password
+    );
+
+    if (!isPasswordValid) {
+      throw new ApiError(HttpStatus.UNAUTHORIZED, "Current password is incorrect");
+    }
+
+    // Hash new password
+    hashedNewPassword = await hashPassword(data.newPassword);
   }
 
-  // Update user
+  // Update user profile
   const updatedUser = await prisma.user.update({
-    where: { id },
+    where: { id: userId },
     data: {
       name: data.name,
       email: data.email,
-      password: data.password,
-      role: data?.role!,
+      password: hashedNewPassword,
     },
     select: {
       id: true,
       email: true,
       name: true,
+      staffId: true,
+      department: true,
       role: true,
+      isActive: true,
+      joiningDate: true,
       createdAt: true,
       updatedAt: true,
     },
