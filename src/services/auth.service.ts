@@ -2,6 +2,7 @@ import { PrismaClient, User, Role } from "@prisma/client";
 import { hashPassword, comparePassword } from "../utils/password.utils";
 import { generateToken } from "../utils/jwt.utils";
 import { ApiError, HttpStatus } from "../utils/error.utils";
+import { createSession } from "../utils/session.utils";
 
 const prisma = new PrismaClient();
 
@@ -10,7 +11,9 @@ export const register = async (
   email: string,
   password: string,
   name: string,
-  role: Role = "TEAM_MEMBER"
+  role: Role = "TEAM_MEMBER",
+  ipAddress?: string,
+  userAgent?: string
 ): Promise<{ user: User; token: string }> => {
   // Check if user already exists
   const existingUser = await prisma.user.findUnique({
@@ -39,7 +42,7 @@ export const register = async (
     userId: user.id,
     role: user.role,
   });
-
+await createSession(user.id, token, ipAddress, userAgent);
   // Remove password from response
   const { password: _, ...userWithoutPassword } = user;
 
@@ -52,7 +55,9 @@ export const register = async (
 // Login user
 export const login = async (
   email: string,
-  password: string
+  password: string,
+    ipAddress?: string,
+  userAgent?: string
 ): Promise<{ user: User; token: string }> => {
   // Find user
   const user = await prisma.user.findUnique({
@@ -75,7 +80,11 @@ export const login = async (
     userId: user.id,
     role: user.role,
   });
-
+await createSession(user.id, token, ipAddress, userAgent);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { lastLoginAt: new Date() },
+  });
   // Remove password from response
   const { password: _, ...userWithoutPassword } = user;
 

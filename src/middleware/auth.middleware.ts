@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { verifyToken } from "../utils/jwt.utils";
 import { ApiError, HttpStatus } from "../utils/error.utils";
 import { PrismaClient } from "@prisma/client";
+import { refreshSession } from "../utils/session.utils";
 
 const prisma = new PrismaClient();
 const SESSION_TIMEOUT_MS = 5 * 60 * 1000;
@@ -41,9 +42,10 @@ export const authenticate = async (
       );
     }
 
+    // 1. Verify JWT signature and expiry
     const decoded = verifyToken(token);
 
-    // Check if user exists and is active
+    // 2. Check if user exists and is active
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
     });
@@ -55,7 +57,16 @@ export const authenticate = async (
     if (!user.isActive) {
       throw new ApiError(HttpStatus.UNAUTHORIZED, "Account is inactive");
     }
-    // Set user info in request
+
+    // 3. Validate session exists and has not timed out due to inactivity.
+    const sessionValid = await refreshSession(token);
+    if (!sessionValid) {
+      throw new ApiError(
+        HttpStatus.UNAUTHORIZED,
+        "Session expired due to inactivity. Please log in again."
+      );
+    }
+
     req.user = {
       userId: decoded.userId,
       role: decoded.role,

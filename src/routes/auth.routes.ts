@@ -4,6 +4,8 @@ import { asyncHandler } from "../utils/common.utils";
 import { validate } from "../middleware/error.middleware";
 import { register, login } from "../services/auth.service";
 import { PrismaClient } from "@prisma/client";
+import { authenticate } from "../middleware/auth.middleware";
+import { deleteSession } from "../utils/session.utils";
 
 const prisma = new PrismaClient();
 const router = Router();
@@ -27,7 +29,9 @@ router.post(
     const { name, email, password } = req.body;
     console.log(`Register attempt for: ${email}`);
 
-    const result = await register(email, password, name);
+    const result = await register(email, password, name,"TEAM_MEMBER",
+  req.ip,
+  req.headers["user-agent"] as string);
 
     const userWithPermissions = {
       ...result.user,
@@ -60,7 +64,8 @@ router.post(
     const { email, password } = req.body;
 
     try {
-      const result = await login(email, password);
+      const result = await login(email, password,req.ip,
+  req.headers["user-agent"] as string);
 
       const userWithPermissions = {
         ...result.user,
@@ -118,5 +123,23 @@ function getPermissionsForRole(role: string): string[] {
       return ["read"];
   }
 }
-
+/**
+ * @route   POST /api/auth/logout
+ * @desc    Invalidate session and log out
+ * @access  Private
+ */
+router.post(
+  "/logout",
+  authenticate,
+  asyncHandler(async (req: any, res: any) => {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (token) {
+      await deleteSession(token);
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
+    });
+  })
+);
 export default router;

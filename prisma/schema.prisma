@@ -729,3 +729,4 @@ model UserSession {
   @@index([token])
   @@map("user_sessions")
 }
+
