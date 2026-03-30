@@ -136,20 +136,29 @@ export const getAllProjects = async (
   const projectScope = getNestedProjectScope(user);
   let where: any = {};
 
-  if (filters?.standalone) {
-    where.programId = null;
-  } else {
-    where.programId = { not: null };
-  }
-
-  if (user.role === "PROGRAM_MANAGER") {
+ if (user.role === "PROGRAM_MANAGER") {
     where = { ...where, ...nestedPortfolioScope };
   } else if (user.role === "PROJECT_MANAGER") {
     where = { ...where, ...projectScope };
   } else if (user.role === "TEAM_MEMBER") {
     where = { ...where, ...projectScope }
   }
-  
+
+// Apply filters AFTER role scope
+if (filters?.standalone !== undefined) {
+  where.programId = filters.standalone ? null : { not: null };
+}
+
+if (filters?.portfolioId) {
+  where.portfolioId = filters.portfolioId;
+}
+
+  if (filters?.standalone) {
+    where.programId = null;
+  } else {
+    where.programId = { not: null };
+  }
+
   if (filters?.portfolioId) {
     where.portfolioId = filters.portfolioId;
   }
@@ -514,18 +523,11 @@ export const deleteProject = async (id: string, userId: string, role: Role,): Pr
 
   // Check if project exists
   const project = await prisma.project.findFirst({
-    where: { 
-      id,
-      ...whereQuery
-    },
-    include: {
-      _count: {
-        select: {
-          tasks: true,
-        },
-      },
-    },
-  });
+  where: whereQuery,
+  include: {
+    _count: { select: { tasks: true } },
+  },
+});
 
   if (!project) {
     throw new ApiError(HttpStatus.NOT_FOUND, "Project not found");

@@ -12,7 +12,7 @@ export const searchAll = async (
   },
   options?: {
     limit?: number;
-    category?: 'all' | 'projects' | 'tasks';
+    category?: 'all' | 'projects' | 'tasks' | "programs";
   }
 ) => {
   const { limit = 5, category = 'all' } = options || {};
@@ -29,6 +29,10 @@ export const searchAll = async (
     tasks = await searchTasks(query, user, limit);
   }
 
+    let programs: any[] = [];
+  if (category === 'all' || category === 'programs') {
+    programs = await searchPrograms(query, user, limit);
+  }
   return {
     projects,
     tasks,
@@ -228,7 +232,59 @@ const searchTasks = async (
     type: 'task' as const,
   }));
 };
+const searchPrograms = async (
+  query: string,
+  user: { role: Role; userId: string },
+  limit: number
+) => {
+  const nestedPortfolioScope = getNestedPortfolioScope(user);
 
+  let where: any = {};
+
+  if (user.role === "PROGRAM_MANAGER") {
+    where = { ...where, ...nestedPortfolioScope };
+  }
+
+  where.AND = [
+    ...(where.AND || []),
+    {
+      OR: [
+        { name: { contains: query, mode: "insensitive" } },
+        { description: { contains: query, mode: "insensitive" } },
+      ],
+    },
+  ];
+
+  const programs = await prisma.program.findMany({
+    where,
+    take: limit,
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      status: true,
+      startDate: true,
+      endDate: true,
+      createdAt: true,
+      portfolio: {
+        select: {
+          id: true,
+          name: true,
+          year: { select: { year: true } },
+        },
+      },
+      _count: {
+        select: { projects: true },
+      },
+    },
+    orderBy: [{ createdAt: "desc" }],
+  });
+
+  return programs.map((program) => ({
+    ...program,
+    type: 'program' as const,
+  }));
+};
 export default {
   searchAll,
 };
