@@ -1,5 +1,6 @@
 import jwt, { SignOptions } from "jsonwebtoken";
 import { Role } from "@prisma/client";
+import type { StringValue } from "ms";
 
 // User payload for JWT
 export interface UserPayload {
@@ -8,10 +9,7 @@ export interface UserPayload {
 }
 
 // Generate JWT token
-export const generateToken = (payload: UserPayload): string => {
-  // Default to 2 days (172800 seconds) if not specified
-  const expiresIn = 172800;
-
+export const generateToken = (payload: UserPayload, expiresIn: StringValue | number = "2d"): string => {
   const options: SignOptions = {
     expiresIn,
   };

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { check } from "express-validator";
 import { asyncHandler } from "../utils/common.utils";
 import { validate } from "../middleware/error.middleware";
-import { register, login } from "../services/auth.service";
+import { register, login, forgotPassword, resetPassword } from "../services/auth.service";
 import { PrismaClient } from "@prisma/client";
 import { authenticate } from "../middleware/auth.middleware";
 import { deleteSession } from "../utils/session.utils";
@@ -86,6 +86,55 @@ router.post(
       return res.status(401).json({
         success: false,
         message: error.message || "Invalid credentials",
+      });
+    }
+  })
+);
+
+/**
+ * @route   POST /api/auth/forgot-password
+ * @desc    Send a password reset link to the user's email
+ * @access  Public
+ */
+router.post(
+  "/forgot-password",
+  [
+    check("email", "Please include a valid email").isEmail(),
+    validate,
+  ],
+  asyncHandler(async (req: any, res: any) => {
+    const { email } = req.body;
+ console.log('getr here')
+    const result = await forgotPassword(email);
+ 
+    // Always return 200 to prevent user enumeration
+    return res.status(200).json(result);
+  })
+);
+ 
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    Verify reset token and update the user's password
+ * @access  Public
+ */
+router.post(
+  "/reset-password",
+  [
+    check("token", "Reset token is required").notEmpty(),
+    check("newPassword", "Password must be at least 6 characters").isLength({ min: 6 }),
+    validate,
+  ],
+  asyncHandler(async (req: any, res: any) => {
+    const { token, newPassword } = req.body;
+ 
+    try {
+      const result = await resetPassword(token, newPassword);
+      return res.status(200).json(result);
+    } catch (error: any) {
+      console.error("Reset password error:", error);
+      return res.status(error.statusCode || 400).json({
+        success: false,
+        message: error.message || "Password reset failed",
       });
     }
   })

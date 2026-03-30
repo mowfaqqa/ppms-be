@@ -462,7 +462,7 @@ export const sendPasswordResetEmail = async (
               <p>Hello ${name},</p>
               <p>We received a request to reset your password for your ${appName} account. Click the button below to set a new password.</p>
 
-              <div style="text-align: center;">
+              <div style="text-align: center; color: #ffffff;">
                 <a href="${resetUrl}" class="button">Reset My Password</a>
               </div>
 
@@ -554,7 +554,7 @@ export const sendPasswordResetSuccessEmail = async (
                 <p>Hello ${name},</p>
                 <p>Your password has been successfully reset. You can now log in with your new password.</p>
 
-                <div style="text-align: center;">
+                <div style="text-align: center; color: #ffffff;">
                   <a href="${appUrl}/login" class="button">Go to Login</a>
                 </div>
 

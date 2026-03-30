@@ -2791,3 +2791,60 @@
 {"level":"error","message":"ApiError: Authorization token is required","method":"GET","path":"/api/dashboard/activities/recent","stack":"ApiError: Authorization token is required\n    at /Users/mac/ppms-be/src/middleware/auth.middleware.ts:30:13\n    at Generator.next (<anonymous>)\n    at /Users/mac/ppms-be/src/middleware/auth.middleware.ts:8:71\n    at new Promise (<anonymous>)\n    at __awaiter (/Users/mac/ppms-be/src/middleware/auth.middleware.ts:4:12)\n    at authenticate (/Users/mac/ppms-be/src/middleware/auth.middleware.ts:25:5)\n    at Layer.handleRequest (/Users/mac/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at next (/Users/mac/ppms-be/node_modules/router/lib/route.js:157:13)\n    at Route.dispatch (/Users/mac/ppms-be/node_modules/router/lib/route.js:117:3)\n    at handle (/Users/mac/ppms-be/node_modules/router/index.js:435:11)","timestamp":"2026-03-10T09:33:31.675Z"}
 {"level":"error","message":"ApiError: Authorization token is required","method":"GET","path":"/api/notifications/unread","stack":"ApiError: Authorization token is required\n    at /Users/mac/ppms-be/src/middleware/auth.middleware.ts:30:13\n    at Generator.next (<anonymous>)\n    at /Users/mac/ppms-be/src/middleware/auth.middleware.ts:8:71\n    at new Promise (<anonymous>)\n    at __awaiter (/Users/mac/ppms-be/src/middleware/auth.middleware.ts:4:12)\n    at authenticate (/Users/mac/ppms-be/src/middleware/auth.middleware.ts:25:5)\n    at Layer.handleRequest (/Users/mac/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at next (/Users/mac/ppms-be/node_modules/router/lib/route.js:157:13)\n    at Route.dispatch (/Users/mac/ppms-be/node_modules/router/lib/route.js:117:3)\n    at handle (/Users/mac/ppms-be/node_modules/router/index.js:435:11)","timestamp":"2026-03-10T09:33:31.676Z"}
 {"level":"error","message":"ApiError: Authorization token is required","method":"GET","path":"/api/dashboard/stats","stack":"ApiError: Authorization token is required\n    at /Users/mac/ppms-be/src/middleware/auth.middleware.ts:30:13\n    at Generator.next (<anonymous>)\n    at /Users/mac/ppms-be/src/middleware/auth.middleware.ts:8:71\n    at new Promise (<anonymous>)\n    at __awaiter (/Users/mac/ppms-be/src/middleware/auth.middleware.ts:4:12)\n    at authenticate (/Users/mac/ppms-be/src/middleware/auth.middleware.ts:25:5)\n    at Layer.handleRequest (/Users/mac/ppms-be/node_modules/router/lib/layer.js:152:17)\n    at next (/Users/mac/ppms-be/node_modules/router/lib/route.js:157:13)\n    at Route.dispatch (/Users/mac/ppms-be/node_modules/router/lib/route.js:117:3)\n    at handle (/Users/mac/ppms-be/node_modules/router/index.js:435:11)","timestamp":"2026-03-10T09:33:31.676Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-03-10T10:04:43.669Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-03-10T10:04:43.720Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-03-10T10:04:43.721Z"}
+{"level":"error","message":"ApiError: Session expired due to inactivity. Please log in again.","method":"GET","path":"/api/notifications/unread","stack":"ApiError: Session expired due to inactivity. Please log in again.\n    at /Users/mac/ppms-be/src/middleware/auth.middleware.ts:64:13\n    at Generator.next (<anonymous>)\n    at fulfilled (/Users/mac/ppms-be/src/middleware/auth.middleware.ts:5:58)","timestamp":"2026-03-10T10:08:35.725Z"}
+{"level":"error","message":"ApiError: Session expired due to inactivity. Please log in again.","method":"GET","path":"/api/notifications/counts","stack":"ApiError: Session expired due to inactivity. Please log in again.\n    at /Users/mac/ppms-be/src/middleware/auth.middleware.ts:64:13\n    at Generator.next (<anonymous>)\n    at fulfilled (/Users/mac/ppms-be/src/middleware/auth.middleware.ts:5:58)","timestamp":"2026-03-10T10:08:35.728Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-03-10T14:58:17.622Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-03-10T14:58:17.724Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-03-10T14:58:17.726Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-03-10T15:10:21.330Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-03-10T15:10:21.377Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-03-10T15:10:21.378Z"}
+{"level":"info","message":"Shutting down gracefully...","timestamp":"2026-03-10T17:40:23.919Z"}
+{"level":"info","message":"Disconnected from database","timestamp":"2026-03-10T17:40:23.931Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-03-24T11:32:03.997Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-03-24T11:32:04.080Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-03-24T11:32:04.081Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-03-30T17:37:15.938Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-03-30T17:37:16.055Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-03-30T17:37:16.057Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-03-30T17:43:01.126Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-03-30T17:43:01.186Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-03-30T17:43:01.189Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-03-30T20:26:18.301Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-03-30T20:26:18.412Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-03-30T20:26:18.414Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-03-30T20:32:31.514Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-03-30T20:32:31.564Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-03-30T20:32:31.566Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-03-30T20:32:42.620Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-03-30T20:32:42.668Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-03-30T20:32:42.669Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-03-30T20:34:18.854Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-03-30T20:34:18.911Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-03-30T20:34:18.912Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-03-30T21:06:50.539Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-03-30T21:06:50.594Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-03-30T21:06:50.595Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-03-30T21:35:16.461Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-03-30T21:35:16.530Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-03-30T21:35:16.531Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-03-30T22:17:10.089Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-03-30T22:17:10.157Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-03-30T22:17:10.159Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-03-30T22:17:50.017Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-03-30T22:17:50.071Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-03-30T22:17:50.072Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-03-30T22:40:24.298Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-03-30T22:40:24.365Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-03-30T22:40:24.366Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-03-30T22:40:44.542Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-03-30T22:40:44.596Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-03-30T22:40:44.597Z"}
+{"level":"info","message":"WebSocket server initialized","timestamp":"2026-03-30T22:45:18.995Z"}
+{"level":"info","message":"Connected to database","timestamp":"2026-03-30T22:45:19.049Z"}
+{"level":"info","message":"Server is running on port 8080","timestamp":"2026-03-30T22:45:19.050Z"}
+{"level":"info","message":"Shutting down gracefully...","timestamp":"2026-03-30T22:52:01.704Z"}
+{"level":"info","message":"Disconnected from database","timestamp":"2026-03-30T22:52:01.718Z"}
