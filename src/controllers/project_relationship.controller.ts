@@ -111,6 +111,7 @@ export const createProjectController = async (
 ) => {
   try {
     const userId = req.user?.userId;
+    const role = req.user.role as Role;
     const {
       name,
       description,
@@ -139,7 +140,8 @@ export const createProjectController = async (
         portfolioId,
         relatedProjectIds,
       },
-      userId
+      userId,
+      role
     );
 
     res.status(HttpStatus.CREATED).json({

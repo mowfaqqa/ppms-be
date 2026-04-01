@@ -74,7 +74,8 @@ router.post(
         portfolioId,
         programId,
       },
-      req.user!.userId
+      req.user.userId,
+      req.user.role
     );
 
     res.status(201).json({

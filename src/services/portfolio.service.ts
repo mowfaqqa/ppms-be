@@ -70,7 +70,25 @@ export const getAllPortfolios = async (
     userId: userId, 
   });
 
-  const where: any = {...portfolioScope};
+  let where: any = {}
+  if (role === "PROGRAM_MANAGER") {
+    where = {...portfolioScope};
+  } else if (role === "PROJECT_MANAGER") {
+    where = {
+      ...where,
+      projects: {
+        some: {
+          members: {
+            some: {
+              userId: userId,
+              role: "PROJECT_MANAGER",
+            },
+          },
+        },
+      },
+    };
+  }
+  
   if (filters?.yearId) {
     where.yearId = filters.yearId;
   }

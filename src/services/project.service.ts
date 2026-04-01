@@ -29,7 +29,8 @@ export const createProject = async (
     programId?: string | null;
     relatedProjectIds?: string[];
   },
-  userId: string
+  userId: string,
+  role: Role
 ): Promise<Project> => {
   // Check if portfolio exists
   const portfolio = await prisma.portfolio.findUnique({
@@ -82,36 +83,45 @@ export const createProject = async (
   }
 
   // Create project
-  const project = await prisma.project.create({
-    data: {
-      name: data.name,
-      description: data.description,
-      startDate: data.startDate,
-      endDate: data.endDate,
-      status: data.status || ProjectStatus.PLANNING,
-      portfolioId: data.portfolioId,
-      programId: data.programId,
-    },
-    include: {
-      portfolio: true,
-      program: true,
-    },
-  });
-
-  // Log activity
-  await prisma.projectActivity.create({
-    data: {
-      type: ActivityType.PROJECT_CREATED,
-      description: `Project "${project.name}" created${
-        project.programId ? " under program" : " as standalone"
-      }`,
-      projectId: project.id,
-      userId: userId,
-      metadata: {
-        status: project.status,
-        programId: project.programId,
+  const project = await prisma.$transaction(async (tx) => {
+    const project = await tx.project.create({
+      data: {
+        name: data.name,
+        description: data.description,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        status: data.status || ProjectStatus.PLANNING,
+        portfolioId: data.portfolioId,
+        programId: data.programId,
       },
-    },
+    });
+
+    if(role === 'PROJECT_MANAGER') {
+      await tx.projectMember.create({
+        data: {
+          projectId: project.id,
+          userId: userId,
+          role: "PROJECT_MANAGER",
+        },
+      });
+    }
+
+    await tx.projectActivity.create({
+      data: {
+        type: ActivityType.PROJECT_CREATED,
+        description: `Project "${project.name}" created${
+          project.programId ? " under program" : " as standalone"
+        }`,
+        projectId: project.id,
+        userId: userId,
+        metadata: {
+          status: project.status,
+          programId: project.programId,
+        },
+      },
+    });
+
+    return project;
   });
 
   return project;
@@ -144,19 +154,9 @@ export const getAllProjects = async (
     where = { ...where, ...projectScope }
   }
 
-// Apply filters AFTER role scope
-if (filters?.standalone !== undefined) {
-  where.programId = filters.standalone ? null : { not: null };
-}
-
-if (filters?.portfolioId) {
-  where.portfolioId = filters.portfolioId;
-}
-
-  if (filters?.standalone) {
-    where.programId = null;
-  } else {
-    where.programId = { not: null };
+  // Apply filters AFTER role scope
+  if (filters?.standalone !== undefined) {
+    where.programId = filters.standalone ? null : { not: null };
   }
 
   if (filters?.portfolioId) {
