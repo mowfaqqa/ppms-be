@@ -252,6 +252,31 @@ export const checkTaskPermission = (permission: string) => {
         return next();
       }
 
+      // Team members act only on the tasks assigned to them, and never delete.
+      // Project membership alone is enough to *view* any task in the project.
+      if (req.user.role === "TEAM_MEMBER") {
+        if (permission === "task.delete") {
+          throw new ApiError(
+            HttpStatus.FORBIDDEN,
+            "Team members cannot delete tasks"
+          );
+        }
+
+        if (permission !== "task.view") {
+          const assignment = await prisma.taskAssignment.findFirst({
+            where: { taskId, userId: req.user.userId },
+            select: { id: true },
+          });
+
+          if (!assignment) {
+            throw new ApiError(
+              HttpStatus.FORBIDDEN,
+              "You can only modify tasks assigned to you"
+            );
+          }
+        }
+      }
+
       // Check if user is member of the project with required permission
       const projectMember = await prisma.projectMember.findFirst({
         where: {

@@ -3,6 +3,7 @@ import { check } from "express-validator";
 import { asyncHandler } from "../utils/common.utils";
 import { validate } from "../middleware/error.middleware";
 import { authenticate } from "../middleware/auth.middleware";
+import { ApiError, HttpStatus } from "../utils/error.utils";
 import {
   checkTaskPermission,
   checkAssignmentLimit,
@@ -176,17 +177,46 @@ router.patch(
       parentTaskId,
     } = req.body;
 
+    // Team members may only move their own task along the board. Everything
+    // else (title, dates, priority, re-parenting) stays with managers — this
+    // mirrors what the UI exposes, which shows them the status selector alone.
+    const isTeamMember = req.user!.role === "TEAM_MEMBER";
+
+    if (isTeamMember) {
+      const attempted = [
+        ["title", title],
+        ["description", description],
+        ["priority", priority],
+        ["startDate", startDate],
+        ["endDate", endDate],
+        ["parentTaskId", parentTaskId],
+      ]
+        .filter(([, value]) => value !== undefined)
+        .map(([field]) => field);
+
+      if (attempted.length > 0) {
+        throw new ApiError(
+          HttpStatus.FORBIDDEN,
+          `Team members can only update task status (attempted: ${attempted.join(
+            ", "
+          )})`
+        );
+      }
+    }
+
     const task = await updateTask(
       id,
-      {
-        title,
-        description,
-        status,
-        priority,
-        startDate,
-        endDate,
-        parentTaskId,
-      },
+      isTeamMember
+        ? { status }
+        : {
+            title,
+            description,
+            status,
+            priority,
+            startDate,
+            endDate,
+            parentTaskId,
+          },
       req.user!.userId
     );
 

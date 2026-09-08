@@ -28,7 +28,12 @@ import {
 import { auditLog } from "../middleware/audit.middleware";
 import { AuditAction, EntityType, ProjectMemberRole } from "@prisma/client";
 import { getRelatedProjectsController } from "../controllers/project_relationship.controller";
-import cloudinary from "../config/cloudinary";
+import {
+  buildObjectKey,
+  uploadObject,
+  getSignedDownloadUrl,
+  deleteObject,
+} from "../config/r2";
 import prisma from "../config/db";
 import { ApiError, HttpStatus } from "../utils/error.utils";
 import upload, { handleMulterErrors} from "../middleware/upload.middleware";
@@ -254,10 +259,16 @@ router.get(
 router.post(
   "/:projectId/members",
   authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
   checkProjectPermission("project.edit"),
   auditLog({
     action: AuditAction.ASSIGNED,
     entityType: EntityType.PROJECT,
+    getEntityId: (req: any) => req.params.projectId,
+    getDescription: (req: any) =>
+      `Added member ${req.body.userId} to project as ${
+        req.body.role ?? "TEAM_MEMBER"
+      }`,
   }),
   checkAssignmentLimit,
   [
@@ -305,8 +316,13 @@ router.put(
     validate,
   ],
   auditLog({
-    action: AuditAction.UPDATED,
+    action: AuditAction.PERMISSION_CHANGED,
     entityType: EntityType.PROJECT,
+    getEntityId: (req: any) => req.params.projectId,
+    getDescription: (req: any) =>
+      req.body.role && !req.body.permissionIds
+        ? `Changed project role of member ${req.params.userId} to ${req.body.role}`
+        : `Updated project permissions for member ${req.params.userId}`,
   }),
   asyncHandler(async (req: any, res: any) => {
     const { projectId, userId } = req.params;
@@ -350,6 +366,7 @@ router.put(
 router.patch(
   "/:projectId/members/:userId/role",
   authenticate,
+  authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
   checkProjectPermission("project.edit"),
   [
     check("role", "Role is required")
@@ -388,8 +405,11 @@ router.delete(
   authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER"]),
   checkProjectPermission("project.edit"),
   auditLog({
-    action: AuditAction.DELETED,
+    action: AuditAction.UNASSIGNED,
     entityType: EntityType.PROJECT,
+    getEntityId: (req: any) => req.params.projectId,
+    getDescription: (req: any) =>
+      `Removed member ${req.params.userId} from project`,
   }),
   asyncHandler(async (req: any, res: any) => {
     const { projectId, userId } = req.params;
@@ -439,6 +459,8 @@ router.post(
   auditLog({
     action: AuditAction.CREATED,
     entityType: EntityType.PROJECT,
+    getEntityId: (req: any) => req.params.projectId,
+    getDescription: () => "Commented on project",
   }),
   asyncHandler(async (req: any, res: any) => {
     const { projectId } = req.params;
@@ -610,7 +632,7 @@ router.get(
 
 /**
  * @route   POST /api/projects/:projectId/files
- * @desc    Upload files to project (stores in Cloudinary)
+ * @desc    Upload files to project (stores in Cloudflare R2)
  * @access  Private
  */
 router.post(
@@ -628,6 +650,13 @@ router.post(
   auditLog({
     action: AuditAction.UPLOADED,
     entityType: EntityType.PROJECT,
+    getEntityId: (req: any) => req.params.projectId,
+    getEntityName: (req: any) =>
+      (req.files as any[])?.map((f) => f.originalname).join(", "),
+    getDescription: (req: any) => {
+      const names = (req.files as any[])?.map((f) => f.originalname) ?? [];
+      return `Uploaded ${names.length} file(s) to project: ${names.join(", ")}`;
+    },
   }),
   asyncHandler(async (req: any, res: any) => {
     const { projectId } = req.params;
@@ -639,25 +668,39 @@ router.post(
 
     const uploadedFiles = await Promise.all(
       files.map(async (file) => {
-        return await prisma.projectFile.create({
-          data: {
-            filename: file.filename, // Cloudinary public_id
-            originalName: file.originalname,
-            size: file.size,
-            mimeType: file.mimetype,
-            projectId,
-            uploadedById: req.user!.userId,
-          },
-          include: {
-            uploadedBy: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
+        // Stream the buffered upload to R2 first; only record it once stored.
+        const key = buildObjectKey(file.originalname, "project-files");
+        await uploadObject(key, file.buffer, file.mimetype, file.originalname);
+
+        try {
+          return await prisma.projectFile.create({
+            data: {
+              filename: key, // R2 object key
+              originalName: file.originalname,
+              size: file.size,
+              mimeType: file.mimetype,
+              projectId,
+              uploadedById: req.user!.userId,
+            },
+            include: {
+              uploadedBy: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
               },
             },
-          },
-        });
+          });
+        } catch (error) {
+          // The object is stored but nothing references it. Remove it so a
+          // failed insert cannot leave an orphan behind in the bucket.
+          await deleteObject(key).catch((cleanupError) =>
+            console.error("R2 orphan cleanup failed:", cleanupError)
+          );
+
+          throw error;
+        }
       })
     );
 
@@ -671,7 +714,7 @@ router.post(
 
 /**
  * @route   GET /api/projects/:projectId/files/:fileId/download
- * @desc    Get Cloudinary download URL
+ * @desc    Get a time-limited R2 download URL
  * @access  Private
  */
 router.get(
@@ -689,12 +732,11 @@ router.get(
       throw new ApiError(HttpStatus.NOT_FOUND, "File not found");
     }
 
-    // Get Cloudinary URL with download flag
-    const resourceType = file.mimeType.startsWith("image/") ? "image" : "raw";
-    const downloadUrl = cloudinary.url(file.filename, {
-      resource_type: resourceType,
-      flags: "attachment:" + file.originalName, // Force download with original name
-    });
+    // Presigned URL, served with the original filename as the download name.
+    const downloadUrl = await getSignedDownloadUrl(
+      file.filename,
+      file.originalName
+    );
 
     res.status(200).json({
       success: true,
@@ -708,7 +750,7 @@ router.get(
 
 /**
  * @route   DELETE /api/projects/:projectId/files/:fileId
- * @desc    Delete a project file from Cloudinary
+ * @desc    Delete a project file from Cloudflare R2
  * @access  Private
  */
 router.delete(
@@ -718,6 +760,8 @@ router.delete(
   auditLog({
     action: AuditAction.DELETED,
     entityType: EntityType.FILE,
+    getEntityId: (req: any) => req.params.fileId,
+    getEntityName: (_req: any, res: any) => res.locals.deletedFileName,
   }),
   asyncHandler(async (req: any, res: any) => {
     const { fileId } = req.params;
@@ -730,21 +774,35 @@ router.delete(
       throw new ApiError(HttpStatus.NOT_FOUND, "File not found");
     }
 
-    // Delete from Cloudinary
-    const resourceType = file.mimeType.startsWith("image/") ? "image" : "raw";
+    // Members may remove their own uploads; clearing out other people's files
+    // is a manager action. (checkProjectPermission admits any TEAM_MEMBER of
+    // the project, so it cannot make this distinction on its own.)
+    if (
+      req.user!.role === "TEAM_MEMBER" &&
+      file.uploadedById !== req.user!.userId
+    ) {
+      throw new ApiError(
+        HttpStatus.FORBIDDEN,
+        "You can only delete files you uploaded"
+      );
+    }
+
+    // Delete from R2
     try {
-      await cloudinary.uploader.destroy(file.filename, {
-        resource_type: resourceType,
-      });
+      await deleteObject(file.filename);
     } catch (error) {
-      console.error("Cloudinary deletion error:", error);
-      // Continue with database deletion even if Cloudinary fails
+      console.error("R2 deletion error:", error);
+      // Continue with database deletion even if the object delete fails,
+      // so a missing object can never wedge the row permanently.
     }
 
     // Delete from database
     await prisma.projectFile.delete({
       where: { id: fileId },
     });
+
+    // Kept for the audit entry — the row is gone by the time it is written.
+    res.locals.deletedFileName = file.originalName;
 
     res.status(200).json({
       success: true,

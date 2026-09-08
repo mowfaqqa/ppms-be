@@ -36,7 +36,20 @@ export const auditLog = (options: AuditLogOptions) => {
           try {
             const entityId = options.getEntityId
               ? options.getEntityId(req, res)
-              : body?.data?.id || req.params.id;
+              : resolveEntityId(req, body);
+
+            // `entityId` is required by the AuditLog model. Without this guard
+            // an unresolved id reached Prisma, threw a validation error, and was
+            // swallowed by the catch below — the action succeeded while its
+            // audit entry vanished with no visible trace.
+            if (!entityId) {
+              console.error(
+                `[audit] SKIPPED ${options.action} ${options.entityType} for ` +
+                  `${req.method} ${req.originalUrl}: could not resolve entityId. ` +
+                  `Pass an explicit getEntityId() for this route.`
+              );
+              return;
+            }
 
             const entityName = options.getEntityName
               ? options.getEntityName(req, res)
@@ -80,6 +93,42 @@ export const auditLog = (options: AuditLogOptions) => {
     next();
   };
 };
+
+/**
+ * Best-effort entity id for routes that do not supply getEntityId().
+ *
+ * Checks the response payload first (covers create/update, which echo the
+ * record), then falls back to the route parameters. The parameter list matters:
+ * handlers name them `:projectId`, `:fileId` and so on, so a bare `req.params.id`
+ * lookup resolves to undefined on most nested routes.
+ */
+function resolveEntityId(req: any, body: any): string | undefined {
+  const fromBody = Array.isArray(body?.data)
+    ? body.data[0]?.id
+    : body?.data?.id;
+
+  if (fromBody) return fromBody;
+
+  const paramNames = [
+    "id",
+    "fileId",
+    "taskId",
+    "projectId",
+    "programId",
+    "portfolioId",
+    "sprintId",
+    "yearId",
+    "userId",
+    "itemId",
+    "commentId",
+  ];
+
+  for (const name of paramNames) {
+    if (req.params?.[name]) return req.params[name];
+  }
+
+  return undefined;
+}
 
 /**
  * Generate human-readable description from action and entity

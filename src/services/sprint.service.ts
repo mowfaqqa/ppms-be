@@ -121,7 +121,9 @@ export const getProjectSprints = async (
   const project = await prisma.project.findFirst({
     where: {
       id: projectId,
-      ...(user.role === "PROGRAM_MANAGER"
+      ...(user.role === "ADMIN"
+        ? {}
+        : user.role === "PROGRAM_MANAGER"
         ? {
             portfolio: {
               programManagers: {

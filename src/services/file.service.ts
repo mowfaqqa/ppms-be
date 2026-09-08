@@ -1,9 +1,13 @@
 import { PrismaClient } from '@prisma/client';
 import { ApiError, HttpStatus } from '../utils/error.utils';
-import cloudinary from '../config/cloudinary';
+import {
+  buildObjectKey,
+  uploadObject,
+  deleteObject,
+  resolveFileUrl,
+} from '../config/r2';
 import { generateUniqueId } from '../utils/common.utils';
 import { notifyFileUploaded } from './notification.service';
-import fs from 'fs';
 
 const prisma = new PrismaClient();
 
@@ -85,11 +89,16 @@ export const uploadFile = async (
       );
     }
 
-    // Upload file to Cloudinary
-    const uploadResult = await cloudinary.uploader.upload(file?.path, {
-      resource_type: 'auto', // Automatically detect file type
-      folder: 'project-management',
-    });
+    // Upload the buffered file to R2. `url` below stores the object key, not a
+    // URL — buckets are private, so links are generated on read via
+    // resolveFileUrl().
+    const objectKey = buildObjectKey(file?.originalname, 'project-management');
+    await uploadObject(
+      objectKey,
+      file?.buffer,
+      file?.mimetype,
+      file?.originalname
+    );
 
     // Find existing files in the same version group or create new group
     let versionGroup = generateUniqueId();
@@ -116,22 +125,30 @@ export const uploadFile = async (
     }
 
     // Save file metadata to database
-    const savedFile = await prisma.file.create({
-      data: {
-        name: file?.originalname,
-        url: uploadResult.secure_url,
-        type: file?.mimetype,
-        size: file?.size,
-        projectId: data.projectId || null,
-        taskId: data.taskId || null,
-        versionGroup,
-        versionNumber,
-        createdById: userId,
-      },
-    });
+    let savedFile;
+    try {
+      savedFile = await prisma.file.create({
+        data: {
+          name: file?.originalname,
+          url: objectKey,
+          type: file?.mimetype,
+          size: file?.size,
+          projectId: data.projectId || null,
+          taskId: data.taskId || null,
+          versionGroup,
+          versionNumber,
+          createdById: userId,
+        },
+      });
+    } catch (error) {
+      // The object is stored but nothing references it. Remove it so a failed
+      // insert cannot leave an orphan behind in the bucket.
+      await deleteObject(objectKey).catch((cleanupError) =>
+        console.error('R2 orphan cleanup failed:', cleanupError)
+      );
 
-    // Delete local file
-    fs.unlinkSync(file?.path);
+      throw error;
+    }
 
     // 🔔 Send notification to project managers
     try {
@@ -188,11 +205,6 @@ export const uploadFile = async (
 
     return savedFile;
   } catch (error) {
-    // Clean up local file if it exists
-    if (file?.path && fs.existsSync(file?.path)) {
-      fs.unlinkSync(file?.path);
-    }
-
     throw error;
   }
 };
@@ -253,7 +265,13 @@ export const  getFiles = async (
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
-  return latestFiles;
+  // `url` is an R2 object key; attach a browser-usable link for each file.
+  return Promise.all(
+    latestFiles.map(async (file) => ({
+      ...file,
+      downloadUrl: await resolveFileUrl(file.url, file.name),
+    }))
+  );
 };
 
 // Get file versions
@@ -271,7 +289,12 @@ export const getFileVersions = async (
     throw new ApiError(HttpStatus.NOT_FOUND, 'File versions not found');
   }
 
-  return files;
+  return Promise.all(
+    files.map(async (file) => ({
+      ...file,
+      downloadUrl: await resolveFileUrl(file.url, file.name),
+    }))
+  );
 };
 
 // Delete file
@@ -346,15 +369,13 @@ export const deleteFile = async (
     }
   }
 
-  // Extract public ID from URL
-  const publicId = file.url.split('/').slice(-1)[0].split('.')[0];
-
   try {
-    // Delete file from Cloudinary
-    await cloudinary.uploader.destroy(`project-management/${publicId}`);
+    // `url` holds the R2 object key.
+    await deleteObject(file.url);
   } catch (error) {
-    console.error('Error deleting file from Cloudinary:', error);
-    // Continue even if Cloudinary delete fails
+    console.error('Error deleting file from R2:', error);
+    // Continue even if the object delete fails, so a missing object can never
+    // wedge the database row permanently.
   }
 
   // Delete file from database

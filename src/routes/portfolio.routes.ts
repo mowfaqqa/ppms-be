@@ -30,8 +30,20 @@ router.post(
   [
     check("name", "Name is required").notEmpty(),
     check("yearId", "Year ID is required").notEmpty(),
+    check("startDate", "Start date must be a valid date")
+      .optional()
+      .isISO8601()
+      .toDate(),
+    check("endDate", "End date must be a valid date")
+      .optional()
+      .isISO8601()
+      .toDate(),
     validate,
   ],
+  auditLog({
+    action: AuditAction.CREATED,
+    entityType: EntityType.PORTFOLIO,
+  }),
   asyncHandler(async (req: any, res: any) => {
     const { name, yearId, description, startDate, endDate, status } = req.body;
 

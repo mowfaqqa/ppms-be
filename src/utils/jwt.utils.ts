@@ -7,6 +7,20 @@ export interface UserPayload {
   role: Role;
 }
 
+// Resolve the signing key. Fails loudly rather than falling back to a
+// hardcoded default, which would let anyone with the source forge tokens.
+const getJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
+    throw new Error(
+      "JWT_SECRET is not set. Refusing to sign or verify tokens with a default key."
+    );
+  }
+
+  return secret;
+};
+
 // Generate JWT token
 export const generateToken = (payload: UserPayload): string => {
   // Default to 2 days (172800 seconds) if not specified
@@ -20,19 +34,13 @@ export const generateToken = (payload: UserPayload): string => {
     `Generating token for user ${payload.userId} with expiration: ${expiresIn} seconds`
   );
 
-  // Ensure JWT_SECRET is defined or use a fallback
-  const jwtSecret =
-    process.env.JWT_SECRET || "default_secret_do_not_use_in_production";
-
-  return jwt.sign(payload, jwtSecret, options);
+  return jwt.sign(payload, getJwtSecret(), options);
 };
 
 // Verify JWT token with better error handling
 export const verifyToken = (token: string): UserPayload => {
   try {
-    const jwtSecret =
-      process.env.JWT_SECRET || "default_secret_do_not_use_in_production";
-    const decoded = jwt.verify(token, jwtSecret) as UserPayload;
+    const decoded = jwt.verify(token, getJwtSecret()) as UserPayload;
 
     return decoded;
   } catch (error) {

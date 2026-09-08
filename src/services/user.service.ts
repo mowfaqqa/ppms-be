@@ -5,16 +5,42 @@ import { ApiError, HttpStatus } from "../utils/error.utils";
 const prisma = new PrismaClient();
 
 // Get all users
-export const getAllUsers = async (): Promise<Partial<User>[]> => {
+export const getAllUsers = async (filters?: {
+  /** Case-insensitive match against name, email or staff ID. */
+  search?: string;
+  /** Omit users who are already members of this project. */
+  excludeProject?: string;
+}): Promise<Partial<User>[]> => {
+  const where: any = {};
+
+  const search = filters?.search?.trim();
+
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { email: { contains: search, mode: "insensitive" } },
+      { staffId: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  if (filters?.excludeProject) {
+    where.projects = { none: { projectId: filters.excludeProject } };
+  }
+
   const users = await prisma.user.findMany({
+    where,
     select: {
       id: true,
       email: true,
       name: true,
       role: true,
+      staffId: true,
+      department: true,
+      isActive: true,
       createdAt: true,
       updatedAt: true,
     },
+    orderBy: { name: "asc" },
   });
 
   return users;

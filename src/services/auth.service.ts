@@ -68,6 +68,15 @@ export const login = async (
     throw new ApiError(HttpStatus.UNAUTHORIZED, "Invalid credentials");
   }
 
+  // Reject deactivated accounts here rather than letting them obtain a token
+  // that every authenticated request would then reject.
+  if (!user.isActive) {
+    throw new ApiError(
+      HttpStatus.UNAUTHORIZED,
+      "Your account has been deactivated. Please contact an administrator."
+    );
+  }
+
   // Verify password
   const isPasswordValid = await comparePassword(password, user.password);
 

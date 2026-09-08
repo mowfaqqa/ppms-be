@@ -15,7 +15,8 @@ const router = Router();
 
 /**
  * @route   GET /api/users
- * @desc    Get all users
+ * @desc    Get all users. Optional ?search= (name, email or staff ID) and
+ *          ?excludeProject= (omit existing members of that project).
  * @access  Admin, Program Manager, Project Manager, Team Member
  */
 router.get(
@@ -23,7 +24,13 @@ router.get(
   authenticate,
   authorize(["ADMIN", "PROGRAM_MANAGER", "PROJECT_MANAGER", "TEAM_MEMBER"]),
   asyncHandler(async (req: any, res: any) => {
-    const users = await getAllUsers();
+    const { search, excludeProject } = req.query;
+
+    const users = await getAllUsers({
+      search: typeof search === "string" ? search : undefined,
+      excludeProject:
+        typeof excludeProject === "string" ? excludeProject : undefined,
+    });
 
     res.status(200).json({
       success: true,

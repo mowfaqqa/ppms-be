@@ -1,21 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import { ApiError, HttpStatus } from "../utils/error.utils";
 import path from "path";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
 import multer from "multer";
-import cloudinary from "../config/cloudinary";
 
-// Configure multer storage
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: async (_req, file) => {
-    return {
-      folder: "project-files",
-      resource_type: "raw",
-      public_id: `${Date.now()}-${file.originalname.split(".")[0]}`,
-    };
-  },
-});
+// Files are buffered in memory and streamed to Cloudflare R2 by the route
+// handlers, so `file.buffer` is what downstream code reads. Nothing is written
+// to local disk. The fileSize limit below bounds memory use per request.
+const storage = multer.memoryStorage();
 
 // File filter
 const allowedExtensions = new Set([

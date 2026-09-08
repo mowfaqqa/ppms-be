@@ -1061,9 +1061,17 @@ export const getTeamMemberStats = async (userId: string) => {
     },
   });
 
-  // Get recent projects (last 3 active projects)
+  // Get the member's 3 most relevant current projects. This must stay in step
+  // with `activeProjects` above: filtering to IN_PROGRESS/ON_HOLD only meant a
+  // member whose project was still in PLANNING saw "1 active project" above an
+  // empty list. Anything not finished or cancelled counts as current.
   const recentProjects = projects
-    .filter(p => p.status === 'IN_PROGRESS' || p.status === 'ON_HOLD')
+    .filter(
+      p =>
+        p.status === 'PLANNING' ||
+        p.status === 'IN_PROGRESS' ||
+        p.status === 'ON_HOLD'
+    )
     .slice(0, 3)
     .map(p => ({
       id: p.id,

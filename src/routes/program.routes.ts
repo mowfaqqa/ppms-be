@@ -337,7 +337,10 @@ router.get(
     const stats = await getProgramStats(id);
 
     // Get program details
-    const program = await getProgramById(id);
+    const program = await getProgramById(id, {
+      userRole: req.user.role,
+      userId: req.user.userId,
+    });
 
     // Calculate additional metrics
     const now = new Date();

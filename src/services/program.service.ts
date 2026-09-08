@@ -145,7 +145,7 @@ export const getProgramById = async (id: string, user?: {
   let whereClause: any = { id };
 
   // Role-based filtering for program managers
-  if (user.userRole === "PROGRAM_MANAGER") {
+  if (user?.userRole === "PROGRAM_MANAGER") {
     const portfolioScope = getPortfolioScope({
       role: user.userRole, userId: user.userId
     });
